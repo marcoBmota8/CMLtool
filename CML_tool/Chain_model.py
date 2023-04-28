@@ -3,15 +3,17 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score 
 import numpy as np
 from aenet import AdaptiveElasticNet
-
+ 
 # %%
 class Chain_model:
-    def __init__(self, penalty = 'elasticnet', C_EN = 1, C_L2 = 1, l1_ratio = 0.5,gamma = 1, alpha = 1, C_coupling = False,
-        solver='saga',max_iter = 4000, warm_start = False, tol = 1e-4, eps_coef = 1e-21, positive_tol = 1e-15):
+    def __init__(self, penalty = 'elasticnet', C_EN = 1, C_L2 = 1, l1_ratio = 0.5,gamma = 1, alpha = 1, 
+                C_coupling = False,rescale_EN = False,solver_ENet='saga',max_iter = 4000, warm_start = False, 
+                tol = 1e-4,eps_coef = 1e-21, positive_tol = 1e-15):
         #params
         self.C_EN = C_EN # Inverse of the strenght of the regularization (naive EN)
         self.C_L2 = C_L2
         self.C_coupling = C_coupling # Whether or not to use the C of EN for the L2 pass
+        self.rescale_EN = rescale_EN # Whether or not to rescale the EN coefficients as per Zou and Hastie 2005
         self.l1_ratio = l1_ratio
         self.gamma = gamma
         self.alpha = alpha #This is the strength of the regularization (Aenet loss function formulation if different than naive EN)
@@ -20,7 +22,7 @@ class Chain_model:
         #If coef > -positive_tol, ignore this and forcively sets negative coef to zero. Otherwise, raise ValueError.
         self.max_iter = max_iter
         self.tol = tol 
-        self.solver = solver
+        self.solver_ENet = solver_ENet
         self.warm_start = warm_start
         self.penalty = penalty
 
@@ -28,20 +30,24 @@ class Chain_model:
         #fit the feature selection model
         if self.penalty == 'elasticnet':
             self.FS = LogisticRegression(penalty = 'elasticnet', C = self.C_EN,
-                l1_ratio = self.l1_ratio, solver=self.solver,
+                l1_ratio = self.l1_ratio, solver=self.solver_ENet,
                 max_iter = self.max_iter, warm_start= self.warm_start, tol = self.tol)
         elif self.penalty=='adanet':
             self.FS = AdaptiveElasticNet(alpha = self.alpha, l1_ratio = self.l1_ratio, gamma = self.gamma, 
                 max_iter = self.max_iter, tol = self.tol, eps_coef = self.eps_coef, solver = 'OSQP', fit_intercept = True)
         elif self.penalty == 'l1':
-            self.FS = LogisticRegression(penalty = 'l1', C = self.C_EN, solver=self.solver,
-                max_iter = self.max_iter, warm_start= self.warm_start, tol = self.tol) 
+            self.FS = LogisticRegression(penalty = 'l1', C = self.C_EN, rescale_EN = self.rescale_EN,
+                                        solver_ENet=self.solver_ENet,solver_Adaptive = self.solver_Adaptive,
+                                        max_iter = self.max_iter, warm_start= self.warm_start, tol = self.tol) 
         else:
             raise TypeError("Wrong feature selection model input string: 'elasticnet', 'adanet' or 'l1' (LASSO).")
         #Set the classes that the model deals with
         self.classes_ = np.unique(y)
         #fit the feature selection model
         self.FS.fit(X,y)
+        # Rescale coefficients of elasticNet (AdaNet rescales internaly its enet_coef_)
+        if (self.penalty == 'elasticnet') and (self.rescale_EN == True):
+            self.FS.coef_ = (1+(1-self.l1_ratio)/(2*self.C_EN))*self.FS.coef_
         #Select non-zero parameters
         features_names = X.columns.values
         self.sel_features = features_names[np.where(abs(self.FS.coef_.ravel()) > 0)] #Ordered by name
