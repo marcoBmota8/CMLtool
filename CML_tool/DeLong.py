@@ -13,7 +13,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 def compute_midrank(x):
     """Computes midranks.
 
-    Args:
+    Args: 
        x - a 1D numpy array
     Returns:
        array of midranks
