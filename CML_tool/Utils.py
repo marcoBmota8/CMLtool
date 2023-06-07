@@ -15,13 +15,14 @@ def save_dataframe_to_csv(df, filename, metadata=None, sep=',', header=True, ind
     """
     Save a pandas DataFrame to a CSV file with optional metadata.
     If the file already exists, a version number is appended to the filename.
-    :param df: the DataFrame to save
-    :param filename: the filename to save the CSV file as
-    :param metadata: optional metadata dictionary to save as a text file with the same name as the CSV file
-    :param sep: the delimiter to use when saving the CSV file
-    :param header: whether to include the column names in the CSV file
-    :param index: whether to include the row index in the CSV file
-    :param encoding: the character encoding to use when saving the CSV file
+    Args:
+        -param df: the DataFrame to save
+        -param filename: the filename to save the CSV file as
+        -param metadata: optional metadata dictionary to save as a text file with the same name as the CSV file
+        -param sep: the delimiter to use when saving the CSV file
+        -param header: whether to include the column names in the CSV file
+        -param index: whether to include the row index in the CSV file
+        -param encoding: the character encoding to use when saving the CSV file
     """
     if os.path.isfile(filename):
         # File already exists, append a version number
@@ -93,3 +94,22 @@ def ICI_calculation(prob_samples,labels,positive_label,resolution = 0.01,bandwid
 
     ICI = mct.compute_ici(orig=x_values, calibrated=pos_intensity/all_intensity,all_intensity=all_intensity)
     return ICI
+
+def overlap_CI(CI1, CI2): 
+    '''
+    Returns whether two confidence intervals overlap or not.
+    
+    Args:
+        -CI1: Frist confidence interval (tuple)
+        -CI2: Second confidence interval (tuple)
+    Returns:
+        Boolean flag
+    '''
+    flag = False
+    
+    l1, u1 = CI1
+    l2, u2 = CI2
+
+    if (l1 <= u2) and (l2 <= u1):
+        flag = True
+    return flag
