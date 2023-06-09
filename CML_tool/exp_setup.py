@@ -2,7 +2,7 @@ import os
 import json
 import itertools
 
-def results_folder_tree(root_dir, metadata):
+def results_folder_tree(root_dir, metadata, results_name = ''):
     '''
     Create the folder tree to store results for a given experiment root directory and metadata.
     First, this function creates a Results folder in the main path as the script where it is ran if it does not already exist.
@@ -18,7 +18,7 @@ def results_folder_tree(root_dir, metadata):
     dataset_name = metadata["dataset_name"]
     
     # Generate directory for results 
-    results_dir = os.path.join(root_dir, 'Results')
+    results_dir = os.path.join(root_dir, 'Results', results_name)
 
     if not os.path.exists(results_dir):
         os.makedirs(results_dir, exist_ok=False)
