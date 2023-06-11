@@ -1,14 +1,29 @@
 #Marco Barbero mota
 #Started February 2023
-#Utils for phenotype/raw variables processing
+#Utils for Computational Medicine Lab pipelines
 
+import os
+import pandas as pd
 import numpy as np
-import os
-import pandas as pd
-
-import os
-import pandas as pd
 import json
+import pickle
+
+def write_pickle(object, path, filename):
+    """
+    Function to write a python object as pickle into a path with a filename
+    """
+    if not filename.endswith(".pkl"):
+        filename = filename+".pkl"
+
+    with open(os.path.join(path,filename), "wb") as file:
+        pickle.dump(object, file)
+        
+def read_pickle(path, filename):
+    if not filename.endswith(".pkl"):
+        filename = filename+".pkl"
+        
+    with open(os.path.join(path,filename), "rb") as file:
+        return pickle.load(file)
 
 
 def save_dataframe_to_csv(df, filename, metadata=None, sep=',', header=True, index=True, encoding='utf-8'):
