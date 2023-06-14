@@ -30,7 +30,10 @@ def compute_metrics(true_model_coefs, model_coefs):
     precision_model = precision_score(true_labels, model_labels)
     f1_score_model = f1_score(true_labels, model_labels)
     mse_model = mean_squared_error(true_model_coefs, model_coefs)
-    mse_model_TN = mean_squared_error(true_model_coefs[non_zero_mask],model_coefs[non_zero_mask])
+    if sum(non_zero_mask)>0:
+        mse_model_TN = mean_squared_error(true_model_coefs[non_zero_mask],model_coefs[non_zero_mask])
+    else:
+        mse_model_TN = np.nan
 
     # Create a dictionary to store the computed metrics
     metrics = {
