@@ -60,7 +60,8 @@ def get_exps_dicts(battery_exps_dict):
     values = list(battery_exps_dict.values())
 
     combinations = []
-    if len(values)>1:
+
+    if len(keys)<len(values):
         # Iterate through all combinations of values
         for combination in itertools.product(*values):
             # Create a new dictionary for the combination
@@ -68,6 +69,9 @@ def get_exps_dicts(battery_exps_dict):
         return combinations
     else:
         return [battery_exps_dict]
+    
+
+    # %%
  
         
 

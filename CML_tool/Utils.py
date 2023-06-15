@@ -68,6 +68,15 @@ def find_nearest(array, value):
 def flatten(t):
     return [item for sublist in t for item in sublist]
 
+def flatten_list(nested_list):
+    flattened = []
+    for item in nested_list:
+        if isinstance(item, list):
+            flattened.extend(flatten_list(item))
+        else:
+            flattened.append(item)
+    return flattened
+
 def look_up_description(df,description):
     '''
     Use this to find what 
