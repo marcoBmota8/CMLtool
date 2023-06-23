@@ -1,6 +1,7 @@
 import os
 import json
 import itertools
+from CML_tool.Utils import flatten_list
 
 def results_folder_tree(root_dir, metadata, results_name = ''):
     '''
@@ -16,6 +17,13 @@ def results_folder_tree(root_dir, metadata, results_name = ''):
     '''
 
     dataset_name = metadata["dataset_name"]
+
+    if isinstance(dataset_name, list) and len(dataset_name)==1:
+        dataset_name = dataset_name[0]
+    elif isinstance(dataset_name, str):
+        pass
+    else:
+        raise ValueError("The format of the dataset_name metadata is WRONG. It is neither a list if one element neither a single string.")
     
     # Generate directory for results 
     results_dir = os.path.join(root_dir, 'Results', results_name)
@@ -61,7 +69,7 @@ def get_exps_dicts(battery_exps_dict):
 
     combinations = []
 
-    if len(keys)<len(values):
+    if len(keys)<len(flatten_list(values)):
         # Iterate through all combinations of values
         for combination in itertools.product(*values):
             # Create a new dictionary for the combination
@@ -71,7 +79,6 @@ def get_exps_dicts(battery_exps_dict):
         return [battery_exps_dict]
     
 
-    # %%
  
         
 

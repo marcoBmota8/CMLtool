@@ -5,6 +5,8 @@ import numpy as np
 import scipy.stats 
 import scipy.special
 import pickle
+import xgboost as xgb
+from typing import Tuple
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -22,7 +24,7 @@ def compute_midrank(x):
     J = np.argsort(x)
     Z = x[J]
     N = len(x)
-    T = np.zeros(N, dtype=np.float)
+    T = np.zeros(N, dtype=float)
     i = 0
     while i < N:
         j = i
@@ -30,7 +32,7 @@ def compute_midrank(x):
             j += 1
         T[i:j] = 0.5*(i + j - 1)
         i = j
-    T2 = np.empty(N, dtype=np.float)
+    T2 = np.empty(N, dtype=float)
     # Note(kazeevn) +1 is due to Python using 0-based indexing
     # instead of 1-based in the AUC formula in the paper
     T2[J] = T + 1
@@ -49,7 +51,7 @@ def compute_midrank_weight(x, sample_weight):
     Z = x[J]
     cumulative_weight = np.cumsum(sample_weight[J])
     N = len(x)
-    T = np.zeros(N, dtype=np.float)
+    T = np.zeros(N, dtype=float)
     i = 0
     while i < N:
         j = i
@@ -57,7 +59,7 @@ def compute_midrank_weight(x, sample_weight):
             j += 1
         T[i:j] = cumulative_weight[i:j].mean()
         i = j
-    T2 = np.empty(N, dtype=np.float)
+    T2 = np.empty(N, dtype=float)
     T2[J] = T
     return T2
 
@@ -71,9 +73,9 @@ def fastDeLong(predictions_sorted_transposed, label_1_count):
     negative_examples = predictions_sorted_transposed[:, m:]
     k = predictions_sorted_transposed.shape[0]
 
-    tx = np.empty([k, m], dtype=np.float)
-    ty = np.empty([k, n], dtype=np.float)
-    tz = np.empty([k, m + n], dtype=np.float)
+    tx = np.empty([k, m], dtype=float)
+    ty = np.empty([k, n], dtype=float)
+    tz = np.empty([k, m + n], dtype=float)
     for r in range(k):
         tx[r, :] = compute_midrank(positive_examples[r, :])
         ty[r, :] = compute_midrank(negative_examples[r, :])
@@ -155,11 +157,17 @@ def DL_logit_CI(alpha,theta,Var):
     function into
     the original scale.
     """
-
-    low_exp = scipy.special.logit(theta) - scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var)/(theta*(1-theta))
-    up_exp = scipy.special.logit(theta) + scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var)/(theta*(1-theta))
-    up_lim = scipy.special.expit(up_exp)
-    low_lim = scipy.special.expit(low_exp)
+    if (theta == 1) and (Var==0):
+        up_lim = 1.0
+        low_lim = 1.0
+    elif (theta ==0) and (Var==0):
+        up_lim = 0.0
+        low_lim = 0.0
+    else:
+        low_exp = scipy.special.logit(theta) - scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var)/(theta*(1-theta))
+        up_exp = scipy.special.logit(theta) + scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var)/(theta*(1-theta))
+        up_lim = scipy.special.expit(up_exp)
+        low_lim = scipy.special.expit(low_exp)
 
     return  np.ravel(low_lim), np.ravel(up_lim)
 
@@ -217,6 +225,24 @@ def delong_roc_test(ground_truth, predictions_one, predictions_two,alpha, printi
 
 
 def AUC_CI(ground_truth,predictions,alpha, printing = False):
+    """Calculate DeLong AUROC and provide
+    both logit and wald confidence intervals.
+    
+    Args:
+        -ground_truth: array of true labels
+        -predictions: array of 
+        -alpha: Delong test significance level
+        -printing: whether to print the result or not (bool) 
+    
+    Returns (in order):
+        -Mean value of the DeLong estimation of the area under the receiving operating characteristic curve (AUROC)
+        -Variance
+        -Wald confidence interval lower limit
+        -Wald confidence interval upper limit
+        -Logit confidence interval lower limit
+        -Logit confidence interval upper limit
+
+    """
     AUC, variance = delong_roc_variance(ground_truth,predictions)
     low_lim_wald, up_lim_wald = np.ravel(Wald_type_DL_CI(alpha = alpha,theta = AUC,Var = variance))
     low_lim_logit, up_lim_logit= np.ravel(DL_logit_CI(alpha = alpha,theta = AUC,Var = variance))
@@ -226,33 +252,55 @@ def AUC_CI(ground_truth,predictions,alpha, printing = False):
               'Logit type:', str(int((1-alpha)*100)),'% CI:[',low_lim_logit,',',up_lim_logit,'] \n')
 
     return AUC, variance, low_lim_wald, up_lim_wald, low_lim_logit, up_lim_logit
+
+def DeLong_AUROC(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """
+    Custom evaluation metric function to pass to XGBoost binary classifiers models as 
+    hyperparameter 'eval_metric'. 
+
+    Args:
+    -y_true: true labels array
+    -y_pred: predicted probabilities array
+    """
+    DL_AUC = delong_roc_variance(
+        predictions=y_pred,
+        ground_truth=y_true
+    )[0]
+    return float(DL_AUC)
+
+
+def fit_method_DeLong_AUROC(predt: np.ndarray, dataset: xgb.DMatrix) -> Tuple[str, float]:
+    """
+    Custom evaluation metric function to pass to XGBoost.fit('eval_metric'=...)
+    for an XGBoostClassifier model. 
+
+    Args:
+    -predt: predicted probabilities array
+    -dataset xgboost DMatrix hosting data matrix (X) and labels (y)
+    """
+    DL_AUC = delong_roc_variance(
+        predictions=predt,
+        ground_truth=dataset.get_label()
+    )[0]
+    return 'DeLong_AUROC', float(DL_AUC)
+
+
 #%%
 if __name__=='__main__':
 
-    df = pd.read_csv('~/Rota_I/Models_last_record_timepoint/ICA/Probabilities predictions/CV_probs_train_sample.csv')
-    df = df.iloc[np.where(df['Ground truth']!='Unknown')[0],:]
-    df.set_index('Patient ID', inplace = True)
-    df.drop(columns = ['Unnamed: 0','Ground truth', 'Probability Excluded'], inplace = True)
-    df.rename(columns = {'Predicted label': 'Phenotypes label', 'Probability Included': 'Phenotypes SLE probability'}, inplace = True)
+    # Perfect case
+    probs = np.array([1,1,1,1,0,1,0,0,1,1,1,1,1,1])
+    gt = np.array([1,1,1,1,0,1,0,0,1,1,1,1,1,1])
+    AUC_CI(alpha=0.05, ground_truth=gt,predictions=probs,printing=False)
 
-    df_raw = pd.read_csv('~/Rota_I/Models_last_record_timepoint/Raw/Probabilities predictions/CV_probs_train_sample.csv')
-    df_raw = df_raw.iloc[np.where(df_raw['Ground truth']!='Unknown')[0],:]
-    df_raw.set_index('Patient ID', inplace = True)
-    df_raw.drop(columns = ['Unnamed: 0', 'Probability Excluded'], inplace = True)
-    df_raw.rename(columns = {'Predicted label': 'Raw variables label', 'Probability Included': 'Raw variables SLE probability'}, inplace = True)
-    print(df_raw.shape)
-
-    df_merge = pd.merge(df_raw,df,on='Patient ID' )
     
-    delong_roc_test(df_merge['Ground truth'].values,
-        df_merge['Phenotypes SLE probability'].values,
-        df_merge['Raw variables SLE probability'],
-        alpha = 0.05)
+    #Comparison
+    probs1 = np.array([0.5,0.6,0.9,0.1,0.001,0.67,0.87,0.35,0.75,0.5,0.5,0.4,0.6,0.7])
+    probs2 = np.array([0.45,0.2,0.99,0.001,0.25,0.8,0.4,0.9,0.7,0.5,0.5,0.4,0.6,0.7])
+    delong_roc_test(gt,probs1,probs2,alpha = 0.05, printing=False)
 
-    AUC_CI(alpha = 0.05,
-           ground_truth=df_merge['Ground truth'].values,
-           predictions= df_merge['Phenotypes SLE probability'].values,
-           printing = True)
+    AUC_CI(alpha = 0.05,ground_truth=gt,predictions=probs1,printing = False)
+    AUC_CI(alpha = 0.05,ground_truth=gt,predictions=probs2,printing = False)
 
 # %%
 
