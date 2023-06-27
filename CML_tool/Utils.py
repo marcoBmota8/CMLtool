@@ -77,6 +77,11 @@ def flatten_list(nested_list):
             flattened.append(item)
     return flattened
 
+def replace_values_in_coef_array(values, positions, out_array_length, fill_value = 0.0):
+    out_array = np.full((1,out_array_length),fill_value)
+    out_array[0,positions] = values
+    return out_array
+
 def look_up_description(df,description):
     '''
     Use this to find what 

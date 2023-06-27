@@ -12,6 +12,9 @@ def compute_metrics(true_model_coefs, model_coefs):
     Returns:
         dict: Dictionary containing computed metrics.
     """
+    true_model_coefs = true_model_coefs.ravel()
+    model_coefs = model_coefs.ravel()
+
     # Create binary labels for the coefficient values (nonzero vs zero)
     true_labels = np.array([1 if coef != 0 else 0 for coef in true_model_coefs])
     model_labels = np.array([1 if coef != 0 else 0 for coef in model_coefs])

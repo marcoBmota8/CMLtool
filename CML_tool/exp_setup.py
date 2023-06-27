@@ -3,15 +3,20 @@ import json
 import itertools
 from CML_tool.Utils import flatten_list
 
-def results_folder_tree(root_dir, metadata, results_name = ''):
+def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_name=''):
     '''
     Create the folder tree to store results for a given experiment root directory and metadata.
-    First, this function creates a Results folder in the main path as the script where it is ran if it does not already exist.
-    Second, it attempts to create a subfolder under Results for the model architecture employed if this does not exits.
-    Third, it takes the path to the input data and uses the folder name to create a subsubfolder under .../Results/model_name to store the results.
+    First, this function attempts to create a '.../Results' (or '.../Results/result_name' if any string is passed under 'result_name')
+    folder in the main path of the script where it is ran if surch directory does not already exist.
+    Second, if indicated through 'create_model_subfolder' it attempts to create a subfolder under Results for the model architecture 
+    employed if this subfolder does not exits.
+    Third, it takes the path to the input data and uses the dataset_name in the metadata to create a subsubfolder /Results/model_name/dataset_name 
+    to store the results.
     Args:
         -root_dir: Experiment root directory
         -metadata: Experiment metadata dictionary
+        -results_name: string to be passed in case a subfolder is needed between 'Results' and model_subfolder
+        -create_model_subfolder: boolean indicating if model subfolder level is desired
     Out:
         -experiment directory
     '''
@@ -31,11 +36,14 @@ def results_folder_tree(root_dir, metadata, results_name = ''):
     if not os.path.exists(results_dir):
         os.makedirs(results_dir, exist_ok=False)
 
-    # Generate directory for model architecture
-    model_dir = os.path.join(results_dir, metadata['model_name'])
+    if create_model_subfolder:
+        # Generate directory for model architecture
+        model_dir = os.path.join(results_dir, metadata['model_name'])
 
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir, exist_ok=False)
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir, exist_ok=False)
+    else:
+        model_dir = results_dir
 
     #Generate directory the experiment
     exp_dir = os.path.join(model_dir, dataset_name)
