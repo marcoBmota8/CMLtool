@@ -27,6 +27,8 @@ def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_
         dataset_name = dataset_name[0]
     elif isinstance(dataset_name, str):
         pass
+    elif dataset_name==None:
+        pass
     else:
         raise ValueError("The format of the dataset_name metadata is WRONG. It is neither a list if one element neither a single string.")
     

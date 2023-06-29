@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import json
 import pickle
+from sklearn.metrics import confusion_matrix
 
 def write_pickle(object, path, filename):
     """
@@ -103,6 +104,28 @@ def odds_ratio_from_DF(df, treatment, diagnosis):
     matrix = df.groupby([treatment,diagnosis]).size()
     print(matrix)
     print('Odds ratio: ', matrix[1,1]*matrix[0,0]/(matrix[0,1]*matrix[1,0]))
+
+def binary_classifier_metrics(threshold, y_true,probas):
+    ''''
+    Compute accuracy,sensitivity, specificity,ppv,npv,f1_score
+    Returned in that order.
+    '''
+        #Computing metrics
+    cm = confusion_matrix(
+        y_true=y_true,
+        y_pred=(probas>threshold).astype(int),
+        labels= np.unique(y_true)
+        )
+    total1=sum(sum(cm))
+    #####from confusion matrix calculate accuracy
+    accuracy=(cm[0,0]+cm[1,1])/total1
+    sensitivity = cm[0,0]/(cm[0,0]+cm[0,1])
+    specificity = cm[1,1]/(cm[1,0]+cm[1,1])  
+    ppv = cm[0,0]/(cm[0,0]+cm[1,0])
+    npv = cm[1,1]/(cm[1,1]+cm[0,1])
+    f1_score = 2*sensitivity*ppv/(sensitivity+ppv)
+
+    return accuracy, sensitivity, specificity,ppv,npv,f1_score
 
 def ICI_calculation(prob_samples,labels,positive_label,resolution = 0.01,bandwidth = 0.05, **kde_args):
     import mct
