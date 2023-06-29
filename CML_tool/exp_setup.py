@@ -3,7 +3,7 @@ import json
 import itertools
 from CML_tool.Utils import flatten_list
 
-def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_name=''):
+def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_name=None):
     '''
     Create the folder tree to store results for a given experiment root directory and metadata.
     First, this function attempts to create a '.../Results' (or '.../Results/result_name' if any string is passed under 'result_name')
@@ -31,7 +31,10 @@ def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_
         raise ValueError("The format of the dataset_name metadata is WRONG. It is neither a list if one element neither a single string.")
     
     # Generate directory for results 
-    results_dir = os.path.join(root_dir, 'Results', results_name)
+    if results_name !=None:
+        results_dir = os.path.join(root_dir, 'Results', results_name)
+    else:
+        results_dir = os.path.join(root_dir, 'Results')
 
     if not os.path.exists(results_dir):
         os.makedirs(results_dir, exist_ok=False)
@@ -46,7 +49,11 @@ def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_
         model_dir = results_dir
 
     #Generate directory the experiment
-    exp_dir = os.path.join(model_dir, dataset_name)
+    if dataset_name !=None:
+        exp_dir = os.path.join(model_dir, dataset_name)
+    else:
+        exp_dir = model_dir
+
 
     if not os.path.exists(exp_dir):
         os.makedirs(exp_dir, exist_ok=False)
