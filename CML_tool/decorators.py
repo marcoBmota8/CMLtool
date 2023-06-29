@@ -1,6 +1,7 @@
 import os
 import logging
 import pandas as pd
+import json
 from CML_tool.Utils import write_pickle, read_pickle
 
 # Configure the logging module
@@ -34,12 +35,16 @@ def file_based_cacheing(path, filename, extension_desired = '.pkl'):
         
                 try:
                     if 'pkl' in extension_desired:
-                        bj_var = read_pickle(path=path, filename=filename)
+                        obj_var = read_pickle(path=path, filename=filename)
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
 
                     elif 'cvs' in extension_desired:
-                        bj_var = pd.read_csv(filepath = os.path.join(path,filename))
+                        obj_var = pd.read_csv(filepath = os.path.join(path,filename))
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
+                    
+                    elif 'json' in extension_desired:
+                        with open(os.path.join(path, filename),'r') as openfile:
+                            obj_var = json.load(openfile)
 
                     else:
                         raise ValueError('File not found or file caching failed.')
@@ -47,13 +52,21 @@ def file_based_cacheing(path, filename, extension_desired = '.pkl'):
                 except:
                     logging.info(msg = "Executing "+func.__name__+" ..." )
                     obj_var = func(*args, **kwargs)
+                    # User-specified saving
                     try:
                         if 'pkl' in extension_desired:
                             write_pickle(object = obj_var, path=path, filename=filename)
+
                         elif 'cvs' in extension_desired:
                             obj_var.to_csv(path_or_buf=os.path.join(path,filename))
+
+                        elif 'json' in extension_desired:
+                            with open(os.path.join(path, filename), "w") as outfile:
+                                json.dump(obj_var, outfile)
+
                         else:
                             raise ValueError('No developed option is valid for input combination of python object and desired extension.')
+                    # Default saving
                     except:
                         logging.info(msg = "Defaulting to pickle saving...")
                         filename = os.path.splitext(filename)[0]
