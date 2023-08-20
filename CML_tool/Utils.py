@@ -119,11 +119,11 @@ def binary_classifier_metrics(threshold, y_true,probas):
     total1=sum(sum(cm))
     #####from confusion matrix calculate accuracy
     accuracy=(cm[0,0]+cm[1,1])/total1
-    sensitivity = cm[0,0]/(cm[0,0]+cm[0,1])
-    specificity = cm[1,1]/(cm[1,0]+cm[1,1])  
-    ppv = cm[0,0]/(cm[0,0]+cm[1,0])
-    npv = cm[1,1]/(cm[1,1]+cm[0,1])
-    f1_score = 2*sensitivity*ppv/(sensitivity+ppv)
+    sensitivity = cm[0,0]/np.maximum(1e-15,(cm[0,0]+cm[0,1]))
+    specificity = cm[1,1]/np.maximum(1e-15,(cm[1,0]+cm[1,1]))  
+    ppv = cm[0,0]/np.maximum(1e-15,(cm[0,0]+cm[1,0]))
+    npv = cm[1,1]/np.maximum(1e-15,(cm[1,1]+cm[0,1]))
+    f1_score = 2*sensitivity*ppv/np.maximum(1e-15,(sensitivity+ppv))
 
     return accuracy, sensitivity, specificity,ppv,npv,f1_score
 

@@ -66,10 +66,26 @@ def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_
 def save_metadata(metadata, exp_dir):
     '''
     Save metadata to a file in the experiment directory.
+
+    It first checks whether there exist a previous run metadata.json.
+    In such case it saves metadata_i.json, where i is the latest version of the metadata.
+    This strategy allows to preserve a history of succesful runs where cacheing may have been
+    used to bypass existing large computations.
     '''
-    metadata_file = os.path.join(exp_dir, "metadata.json")
-    with open(metadata_file, "w") as f:
-        json.dump(metadata, f)
+    if os.path.exists(os.path.join(exp_dir,"metadata.json")):
+        meta_exists = True
+        cont = 0
+        while meta_exists:
+            cont +=1
+            if not os.path.exists(os.path.join(exp_dir,f"metadata_{cont}.json")):
+                meta_exists=False
+                metadata_file = os.path.join(exp_dir, f"metadata_{cont}.json")
+                with open(metadata_file, "w") as f:
+                    json.dump(metadata, f)
+    else:    
+        metadata_file = os.path.join(exp_dir, "metadata.json")
+        with open(metadata_file, "w") as f:
+            json.dump(metadata, f)
     return
 
 def get_exps_dicts(battery_exps_dict):

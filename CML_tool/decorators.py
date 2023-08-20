@@ -7,13 +7,13 @@ from CML_tool.Utils import write_pickle, read_pickle
 # Configure the logging module
 logging.basicConfig(level=logging.INFO)
 
-def file_based_cacheing(path, filename, extension_desired = '.pkl'):
+def file_based_cacheing(path: str, file_name,  extension_desired = '.pkl'):
     """
     File based cacheing. 
         1. It attempts to read the file and return the object.
         2. If fails:
             1. It runs the function it decorates.
-            2. Saves the result to the path+filename
+            2. Saves the result to the path+file_name
             3. Returns the result object.
     
     Current implementation allows to save and return:
@@ -21,7 +21,7 @@ def file_based_cacheing(path, filename, extension_desired = '.pkl'):
       -pandas dataframes as .csv files.
     
     If the user-specified saving fails, the decorator default behavior is
-    to override the user-specified filename by removing the specified extension 
+    to override the user-specified file_name by removing the specified extension 
     if any, and .append pkl at the end.
     It then saves the data/python object.
 
@@ -31,19 +31,19 @@ def file_based_cacheing(path, filename, extension_desired = '.pkl'):
     """
     def decorator(func):
         def wrapper(*args, **kwargs):
-            if (path is not None) and (filename is not None):
+            if (path is not None) and (file_name is not None):
         
                 try:
                     if 'pkl' in extension_desired:
-                        obj_var = read_pickle(path=path, filename=filename)
+                        obj_var = read_pickle(path=path, filename=file_name)
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
 
                     elif 'cvs' in extension_desired:
-                        obj_var = pd.read_csv(filepath = os.path.join(path,filename))
+                        obj_var = pd.read_csv(filepath = os.path.join(path,file_name))
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
                     
                     elif 'json' in extension_desired:
-                        with open(os.path.join(path, filename),'r') as openfile:
+                        with open(os.path.join(path, file_name),'r') as openfile:
                             obj_var = json.load(openfile)
 
                     else:
@@ -55,13 +55,16 @@ def file_based_cacheing(path, filename, extension_desired = '.pkl'):
                     # User-specified saving
                     try:
                         if 'pkl' in extension_desired:
-                            write_pickle(object = obj_var, path=path, filename=filename)
+                            os.makedirs(path, exist_ok=True) # Ensure that the host folder exists
+                            write_pickle(object = obj_var, path=path, filename=file_name)
 
                         elif 'cvs' in extension_desired:
-                            obj_var.to_csv(path_or_buf=os.path.join(path,filename))
+                            os.makedirs(path, exist_ok=True) # Ensure that the host folder exists
+                            obj_var.to_csv(path_or_buf=os.path.join(path,file_name))
 
                         elif 'json' in extension_desired:
-                            with open(os.path.join(path, filename), "w") as outfile:
+                            os.makedirs(path, exist_ok=True) # Ensure that the host folder exists
+                            with open(os.path.join(path, file_name), "w") as outfile:
                                 json.dump(obj_var, outfile)
 
                         else:
@@ -69,8 +72,8 @@ def file_based_cacheing(path, filename, extension_desired = '.pkl'):
                     # Default saving
                     except:
                         logging.info(msg = "Defaulting to pickle saving...")
-                        filename = os.path.splitext(filename)[0]
-                        write_pickle(object = obj_var, path=path, filename=filename+'.pkl')
+                        file_name_except = os.path.splitext(file_name)[0]
+                        write_pickle(object = obj_var, path=path, filename=file_name_except+'.pkl')
 
                     logging.info(msg = "Function "+func.__name__+" EXECUTION COMPLETE & RESULT FILE SAVED.")
 
@@ -80,3 +83,5 @@ def file_based_cacheing(path, filename, extension_desired = '.pkl'):
 
         return wrapper
     return decorator
+
+
