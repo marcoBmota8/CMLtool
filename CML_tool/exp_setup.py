@@ -1,8 +1,10 @@
+# %%
 import os
 import json
 import itertools
 from CML_tool.Utils import flatten_list
 
+# %%
 def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_name=None):
     '''
     Create the folder tree to store results for a given experiment root directory and metadata.
