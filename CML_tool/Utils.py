@@ -158,7 +158,7 @@ def odds_ratio_from_DF(df, treatment, diagnosis):
 def binary_classifier_metrics(threshold, y_true,probas):
     ''''
     Compute accuracy,sensitivity, specificity,ppv,npv,f1_score
-    Returned in that order.
+    Returned in that order. 
     '''
         #Computing metrics
     cm = confusion_matrix(

@@ -1,6 +1,31 @@
 import numpy as np
 from scipy import stats
-from Utils import contains_val_CI
+from .Utils import contains_val_CI
+
+class GelmanScaler:
+    def __init__(self):
+        self.mean = None
+        self.std = None
+        self.constant_indices = None
+
+    def fit(self, X):
+        self.mean = np.mean(X, axis=0)
+        self.std = np.std(X, axis=0)
+        self.constant_indices = np.where(self.std < 1e-8)[0]
+
+    def transform(self, X):
+        if self.mean is None or self.std is None or self.constant_indices is None:
+            raise ValueError("Scaler has not been fitted. Call fit() before transform().")
+        
+        # Avoid dividing by std for constant variables
+        std_divisor = np.where(self.std >= 1e-8, 2*self.std, 1.0) # we dont use !=0 to account for floating-point numerical precision
+        
+        return (X - self.mean) / std_divisor
+
+    def fit_transform(self, X):
+        self.fit(X)
+        return self.transform(X)
+
 
 def Grubb_test(data, val_outlier = 0.0, alpha = 0.05):
     ''''
