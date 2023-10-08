@@ -145,7 +145,7 @@ def DL_logit_CI(alpha,theta,Var):
     """
 
     Since the AUC is restricted to [0,1], Pepe et al 2003 has argued that an asymmetric confidence
-    interval within (0,1) should be preferred. Using a logistic transformation, th e limits are... (Qin et al 2008)
+    interval within (0,1) should be preferred. Using a logistic transformation, the limits are... (Qin et al 2008)
 
     DeLong estimator 
     for the variance
