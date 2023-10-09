@@ -57,8 +57,10 @@ def calculate_shap_values(
 
             +The interventional scenario is an approximation of the observational/full conditional
               expectation. It assumes features are independent so it disregards any correlation among features.
-              We stay  "true to the model" (Chen et al, 2020).
-              All dependence strcutures are broken and so it uncovers how the model would behave 
+              We stay  "true to the model" (Chen et al, 2020). HOWEVER, from a causal perspective 
+              it is the correct way to compute the marginal contribution of a feature to a model prediction 
+              as it is analogus to the expectation computed using Pearl's do-operator (Janzing et al. 2020).
+              All dependence structures are broken and so it uncovers how the model would behave 
               if we intervened and changed some of the inputs. Shapley values are calculated so that 
               credit for a prediction is only given to the features the model actually uses. The benefit of
               this approach is that it will never give credit to features that are not used by the model but that
