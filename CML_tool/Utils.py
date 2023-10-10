@@ -8,6 +8,11 @@ import numpy as np
 import json
 import pickle
 from sklearn.metrics import confusion_matrix
+import re
+
+def chunked_dataframe(df, chunk_size):
+    for i in range(0, len(df)-chunk_size, chunk_size):
+        yield df.iloc[i:i + chunk_size]
 
 def write_pickle(object, path, filename):
     """
@@ -16,16 +21,44 @@ def write_pickle(object, path, filename):
     if not filename.endswith(".pkl"):
         filename = filename+".pkl"
 
-    with open(os.path.join(path,filename), "wb") as file:
-        pickle.dump(object, file)
+    #Try to save the file at once (may run into memory issues for large files)
+    try:
+        with open(os.path.join(path,filename), "wb") as file:
+            pickle.dump(object, file)
+
+    #If there is an error thrown save and the file is a DataFrame save it in chunks
+    except:
+        if isinstance(object, pd.DataFrame):
+            with open(os.path.join(path,filename), 'wb') as file:
+                #calculate a decent chunk size: ~10% of its length
+                chunk_size = int(0.1 * len(object))
+                for chunk in chunked_dataframe(object, chunk_size):
+                    pickle.dump(chunk, file)
+        else:
+            raise ValueError("File couldn't be pickle directly and neither was a DataFrame that \
+                             could be pikcled in chunks. Revise the write_pickle fucntion \
+                             for your current use.")        
         
 def read_pickle(path, filename):
     if not filename.endswith(".pkl"):
         filename = filename+".pkl"
-        
-    with open(os.path.join(path,filename), "rb") as file:
-        return pickle.load(file)
-
+    
+    # Try to read the pickle file as it had been saved as a single file
+    try:
+        with open(os.path.join(path,filename), "rb") as file:
+            return pickle.load(file)
+    # If file was saved as chuncks reading needs sequential loading and appending
+    except:
+        loaded_chunks = []
+        with open(os.path.join(path,filename), 'rb') as file:
+            while True:
+                try:
+                    chunk = pickle.load(file)
+                    loaded_chunks.append(chunk)
+                except EOFError:
+                    # Reached the end of the file
+                    break
+        return pd.concat(loaded_chunks)
 
 def save_dataframe_to_csv(df, filename, metadata=None, sep=',', header=True, index=True, encoding='utf-8'):
     """
@@ -34,32 +67,49 @@ def save_dataframe_to_csv(df, filename, metadata=None, sep=',', header=True, ind
     Args:
         -param df: the DataFrame to save
         -param filename: the filename to save the CSV file as
-        -param metadata: optional metadata dictionary to save as a text file with the same name as the CSV file
+        -param metadata: optional metadata dictionary to save as a json file with the same name as the CSV file
         -param sep: the delimiter to use when saving the CSV file
         -param header: whether to include the column names in the CSV file
         -param index: whether to include the row index in the CSV file
         -param encoding: the character encoding to use when saving the CSV file
     """
-    if os.path.isfile(filename):
+    if os.path.isfile(f"{filename}.csv"):
         # File already exists, append a version number
-        base_filename, ext = os.path.splitext(filename)
-        i = 2
-        while os.path.isfile(f"{base_filename}_v{i}{ext}"):
+        i = 1
+        while os.path.isfile(f"{filename}_v{i}.csv"):
             i += 1
-        versioned_filename = f"{base_filename}_v{i}{ext}"
+        versioned_filename = f"{filename}_v{i}.csv"
         if metadata:
-            metadata_filename = f"{base_filename}_v{i}.txt"
+            metadata_filename = f"{filename}_v{i}.json"
             with open(metadata_filename, "w") as f:
                 json.dump(metadata, f, indent=4)
     else:
         # File does not exist yet, save as given filename
-        versioned_filename = filename
+        versioned_filename = f"{filename}.csv"
         if metadata:
-            metadata_filename = f"{os.path.splitext(filename)[0]}.txt"
+            metadata_filename = f"{os.path.splitext(filename)[0]}.json"
             with open(metadata_filename, "w") as f:
                 json.dump(metadata, f, indent=4)
     df.to_csv(versioned_filename, sep=sep, header=header, index=index, encoding=encoding)
 
+def oredered_features(selected_features,coefs, how):
+    '''
+    Args:
+        -Selected_features: List of the tuples/strings of the selected features
+        -coefs: array with the coefficient values for the selected features. 
+            It is assumed that it is passed in the same order
+        -how: method for how the features are ordered according to their coef
+            values. "signed" (taking into account the coefficient sign) or 
+            "absolute" (absolute value). (Default: "absolute)
+    '''
+    if (how == 'absolute') and (len(selected_features)>0):
+        return selected_features[np.argsort(coefs)][::-1]
+    elif (how == 'signed') and (len(selected_features)>0):
+        return selected_features[np.argsort(abs(coefs))][::-1]
+    elif (len(selected_features)==0):
+        return selected_features
+    else:
+        raise ValueError('Wrong "how" string passed. Use "absolute" or "signed" instead.')
 
 def find_nearest(array, value):
     array = np.asarray(array)
@@ -165,3 +215,20 @@ def overlap_CI(CI1, CI2):
     if (l1 <= u2) and (l2 <= u1):
         flag = True
     return flag
+
+def contains_val_CI(CI, val):
+    '''
+    Returns whether a confidence intervals contains a value or not.
+    
+    Args:
+        -CI (tuple): Frist confidence interval (
+        -val (float): value to check for
+    Returns:
+        Boolean flag
+    '''
+    if CI[0] < val < CI[1]:
+        return True 
+    elif (CI[0] == val) and (CI[1] == val):
+        return True
+    else:
+        return False
