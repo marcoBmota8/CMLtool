@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import stats
-from .Utils import contains_val_CI
+from Utils import contains_val_CI
 
 class GelmanScaler:
     def __init__(self):
@@ -57,10 +57,10 @@ def Grubb_test(data, val_outlier = 0.0, alpha = 0.05):
     # Check if the test statistic exceeds the critical value
     return test_statistic > critical_value
 
-def coef_bootstrapped_CI(model,X,y,alpha=0.05,n_bootstrap=100,nonzero_flag = False):
+def coef_bootstrapped_CI(model,X,y,alpha=0.05,n_bootstrap=1000,nonzero_flag = False):
     '''
-    Compute confidence intervals based on bootstrapping distribution
-    alpha and 1-alpha quantiles.
+    Compute confidence intervals and p-value based on 
+    bootstrapping distribution alpha and 1-alpha quantiles.
     Can provide a flag for nonzero coefficients based on 
     its confidence interval including 0 or not.
 
@@ -69,12 +69,14 @@ def coef_bootstrapped_CI(model,X,y,alpha=0.05,n_bootstrap=100,nonzero_flag = Fal
         -X (numpy.arrray): training data 
         -y (numpy.array): labels
         -alpha (float): test significance level. (Default:0.05)
-        -n_bootstrap (int): number of bootstrapped repetitions (Default:100)
+        -n_bootstrap (int): number of bootstrapped repetitions (Default:1000)
         -nonzero_flag (bool): whether or not nonzero flags should be returned. 
             (Default=True)
 
     Returns:
-        -confidence_intervals(numpy.array): array of tuples of the form (beta mean,CI_lower,CI_upper)
+        -confidence_intervals_E (numpy.array): Bootstrap quantiles CI, array of tuples of the form (beta mean,CI_lower,CI_upper)
+        -confidence_intervals_P (numpy.array): Bootstrap pivot-based CI (PREFERRED),array of tuples of the form (beta mean,CI_lower,CI_upper)
+        - p-value (numpy.array): array of p-values for the null hypothesis H0: beta_i=0.
         - flags (numpy.array): array of boolean flags should be
             returned marking which coefficients are statistically nonzero. Statsitically different
             from zero at 1-alpha confidence is obtained by checking whether the confidence intervals include 
@@ -100,17 +102,28 @@ def coef_bootstrapped_CI(model,X,y,alpha=0.05,n_bootstrap=100,nonzero_flag = Fal
         coefs = np.vstack((coefs, model.coef_.ravel()))
     
     # Calculate confidence intervals
+    
+    #Bootstrap quantiles CI
     lower_percentile = 100*alpha/2
     upper_percentile = 100-lower_percentile
-    lower_bound = np.percentile(coefs, lower_percentile, axis=0)
-    upper_bound = np.percentile(coefs, upper_percentile, axis=0)
-
+    lower_bound_E = np.percentile(coefs, lower_percentile, axis=0)
+    upper_bound_E = np.percentile(coefs, upper_percentile, axis=0)
+    
+    # Pivot based bootstrapp CI
+    estimate = np.mean(coefs, axis=0)
+    lower_bound_P = 2*estimate-upper_bound_E
+    upper_bound_P = 2*estimate-lower_bound_E
+    
     # list of tuples one per coefficient
-    confidence_intervals = [(np.mean(coefs, axis = 0),lower_bound[i], upper_bound[i]) for i in range(p)]
+    confidence_intervals_E = [(estimate,lower_bound_E[i], upper_bound_E[i]) for i in range(p)]
+    confidence_intervals_P = [(estimate,lower_bound_P[i], upper_bound_P[i]) for i in range(p)]
 
     if nonzero_flag:
-        return confidence_intervals, np.array([not contains_val_CI(CI = (lower_bound[i], upper_bound[i]), val = 0) for i in range(p)])
+        return confidence_intervals_E,\
+            confidence_intervals_P,\
+            np.array([not contains_val_CI(CI = (lower_bound_E[i], upper_bound_E[i]), val = 0) for i in range(p)]), \
+            np.array([not contains_val_CI(CI = (lower_bound_P[i], upper_bound_P[i]), val = 0) for i in range(p)])
     else:
-        return confidence_intervals
+        return confidence_intervals_E, confidence_intervals_P
 
 
