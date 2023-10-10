@@ -66,28 +66,27 @@ def save_dataframe_to_csv(df, filename, metadata=None, sep=',', header=True, ind
     Args:
         -param df: the DataFrame to save
         -param filename: the filename to save the CSV file as
-        -param metadata: optional metadata dictionary to save as a text file with the same name as the CSV file
+        -param metadata: optional metadata dictionary to save as a json file with the same name as the CSV file
         -param sep: the delimiter to use when saving the CSV file
         -param header: whether to include the column names in the CSV file
         -param index: whether to include the row index in the CSV file
         -param encoding: the character encoding to use when saving the CSV file
     """
-    if os.path.isfile(filename):
+    if os.path.isfile(f"{filename}.csv"):
         # File already exists, append a version number
-        base_filename, ext = os.path.splitext(filename)
-        i = 2
-        while os.path.isfile(f"{base_filename}_v{i}{ext}"):
+        i = 1
+        while os.path.isfile(f"{filename}_v{i}.csv"):
             i += 1
-        versioned_filename = f"{base_filename}_v{i}{ext}"
+        versioned_filename = f"{filename}_v{i}.csv"
         if metadata:
-            metadata_filename = f"{base_filename}_v{i}.txt"
+            metadata_filename = f"{filename}_v{i}.json"
             with open(metadata_filename, "w") as f:
                 json.dump(metadata, f, indent=4)
     else:
         # File does not exist yet, save as given filename
-        versioned_filename = filename
+        versioned_filename = f"{filename}.csv"
         if metadata:
-            metadata_filename = f"{os.path.splitext(filename)[0]}.txt"
+            metadata_filename = f"{os.path.splitext(filename)[0]}.json"
             with open(metadata_filename, "w") as f:
                 json.dump(metadata, f, indent=4)
     df.to_csv(versioned_filename, sep=sep, header=header, index=index, encoding=encoding)
