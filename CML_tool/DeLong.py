@@ -124,7 +124,7 @@ def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
     pvalue = 10**log10_p_value[0][0]
 
    #CI
-    up_lim, low_lim = np.ravel(DL_logit_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
+    up_lim, low_lim = np.ravel(Wald_type_DL_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
     if printing == True:
         print('DeLong test results: log10(p-value)= ', log10_p_value[0][0], '(p-value = ',pvalue,'), AUC difference = ',AUC_diff, 
         str(int((1-alpha)*100)),'% CI:[',up_lim,',',low_lim,']')
@@ -283,14 +283,14 @@ def fit_method_DeLong_AUROC(predt: np.ndarray, dataset: xgb.DMatrix) -> Tuple[st
 if __name__=='__main__':
 
     # Perfect case
-    probs = np.array([1,1,1,1,0,1,0,0,1,1,1,1,1,1])
-    gt = np.array([1,1,1,1,0,1,0,0,1,1,1,1,1,1])
+    probs = np.array(45*[1,1,1,1,0,1,0,0,1,1,1,1,1,1])
+    gt = np.array(45*[1,1,1,1,0,1,0,0,1,1,1,1,1,1])
     AUC_CI(alpha=0.05, ground_truth=gt,predictions=probs,printing=True)
 
     
     #Comparison
-    probs1 = np.array([0.5,0.6,0.9,0.1,0.001,0.67,0.87,0.35,0.75,0.5,0.5,0.4,0.6,0.7])
-    probs2 = np.array([0.45,0.2,0.99,0.001,0.25,0.8,0.4,0.9,0.7,0.5,0.5,0.4,0.6,0.7])
+    probs1 = np.array(45*[0.5,0.6,0.9,0.1,0.001,0.67,0.87,0.35,0.75,0.5,0.5,0.4,0.6,0.7])
+    probs2 = np.array(45*[0.45,0.2,0.99,0.001,0.25,0.8,0.4,0.9,0.7,0.5,0.5,0.4,0.6,0.7])
     delong_roc_test(gt,probs1,probs2,alpha = 0.05, printing=True)
 
     AUC_CI(alpha = 0.05,ground_truth=gt,predictions=probs1,printing = True)
