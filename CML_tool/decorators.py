@@ -45,6 +45,7 @@ def file_based_cacheing(path: str, file_name,  extension_desired = '.pkl'):
                     elif 'json' in extension_desired:
                         with open(os.path.join(path, file_name),'r') as openfile:
                             obj_var = json.load(openfile)
+                        logging.info(msg = "Function "+func.__name__+" CACHED.")
 
                     else:
                         raise ValueError('File not found or file caching failed.')
