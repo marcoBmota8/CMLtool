@@ -145,17 +145,12 @@ def DL_logit_CI(alpha,theta,Var):
     """
 
     Since the AUC is restricted to [0,1], Pepe et al 2003 has argued that an asymmetric confidence
-    interval within (0,1) should be preferred. Using a logistic transformation, the limits are... (Qin et al 2008)
+    interval within (0,1) should be preferred. Using a logistic transformation, the limits are... (Quin and Hotilovac 2008)
 
-    DeLong estimator 
-    for the variance
-    and the logit function to 
-    ensure CI bounds
-    fall within [0,1] (Delta method)
-    The transformation is 
-    reversed via expit
-    function into
-    the original scale.
+    This function used DeLong estimator for the variance
+    and the logi function to ensure CI bounds fall within [0,1]
+    The Delta method is used to approximate the transformation which is 
+    reversed via expit function into the original scale.
     """
     if (theta == 1) and (Var==0):
         up_lim = 1.0
@@ -164,8 +159,8 @@ def DL_logit_CI(alpha,theta,Var):
         up_lim = 0.0
         low_lim = 0.0
     else:
-        low_exp = scipy.special.logit(theta) - scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var)/(theta*(1-theta))
-        up_exp = scipy.special.logit(theta) + scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var)/(theta*(1-theta))
+        low_exp = scipy.special.logit(theta) - scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var)/(theta*(1-theta)) # Quin and Hotilovac 2008
+        up_exp = scipy.special.logit(theta) + scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var)/(theta*(1-theta))  # Quin and Hotilovac 2008
         up_lim = scipy.special.expit(up_exp)
         low_lim = scipy.special.expit(low_exp)
 
@@ -175,8 +170,8 @@ def Wald_type_DL_CI (alpha,theta, Var):
     """
     Wald type CI
     """
-    up_lim = theta + scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var)
-    low_lim = theta - scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var)
+    up_lim = theta + scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var) # Cho et al. 2018
+    low_lim = theta - scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var) # Cho et al. 2018
 
     return np.ravel(low_lim),np.ravel(up_lim)
 
