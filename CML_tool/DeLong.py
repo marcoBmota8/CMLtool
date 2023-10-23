@@ -85,14 +85,14 @@ def fastDeLong(predictions_sorted_transposed, label_1_count):
     delongcov = sx / m + sy / n #covariance matrix of both AUC1 & AUC2
     return aucs, delongcov
 
-def calc_pvalue(aucs, sigma, alpha, printing = False):
+def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
     """Computes and returns the AUC difference
     test statistic (U-statistic difference)
     and the p-value log(10) of the test
 
     Args:
        aucs: 1D array of AUCs
-       sigma: AUC DeLong covariances
+       sigma: AUC DeLong covariance matrix
     Returns:
        log10(pvalue)
        test statistic
@@ -101,28 +101,30 @@ def calc_pvalue(aucs, sigma, alpha, printing = False):
     """
     #Individual AUCs
     # I
-    up_lim_AUC1, low_lim_AUC1 = np.ravel(DL_logit_CI(alpha = alpha, theta=aucs[0], Var=sigma[0,0]))
+    up_lim_AUC1, low_lim_AUC1 = np.ravel(DL_logit_CI(alpha = alpha, theta=aucs[0], Var=sigma_sq[0,0]))
     if printing == True:
-        print('AUC 1 = ', aucs[0], 'variance = ',sigma[0,0],
+        print('AUC 1 = ', aucs[0], 'variance = ',sigma_sq[0,0],
         str(int((1-alpha)*100)),'% CI:[',low_lim_AUC1,',',up_lim_AUC1,'] \n')
 
     #II
-    up_lim_AUC2, low_lim_AUC2 = np.ravel(DL_logit_CI(alpha = alpha, theta=aucs[1], Var=sigma[1,1]))
+    up_lim_AUC2, low_lim_AUC2 = np.ravel(DL_logit_CI(alpha = alpha, theta=aucs[1], Var=sigma_sq[1,1]))
     if printing == True:
-        print('AUC 2 = ', aucs[1], 'variance = ',sigma[1,1],
+        print('AUC 2 = ', aucs[1], 'variance = ',sigma_sq[1,1],
         str(int((1-alpha)*100)),'% CI:[',low_lim_AUC2,',',up_lim_AUC2,']\n')
-    #AUC difference   
+        
+    #Test  
     l = np.array([[1, -1]])
-    sigma_diff = np.sqrt(np.dot(np.dot(l, sigma), l.T)) #std of the AUC difference
-    AUC_diff = abs(np.diff(aucs))  # AUC difference absolute
+    sigma_diff = np.sqrt(np.dot(np.dot(l, sigma_sq), l.T)) #std of the AUC difference
+    AUC_diff = abs(np.diff(aucs))  # AUC difference absolute value
     AUC_diff_signed = np.diff(aucs) # AUC difference
-    z = AUC_diff/sigma_diff #normally distributed 
+    z = AUC_diff/sigma_diff #U-statistic
+    
     #P-value
     log10_p_value = np.log10(2) + scipy.stats.norm.logsf(z, loc=0, scale=1) / np.log(10)
     pvalue = 10**log10_p_value[0][0]
 
    #CI
-    up_lim, low_lim = np.ravel(DL_logit_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff))
+    up_lim, low_lim = np.ravel(DL_logit_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
     if printing == True:
         print('DeLong test results: log10(p-value)= ', log10_p_value[0][0], '(p-value = ',pvalue,'), AUC difference = ',AUC_diff, 
         str(int((1-alpha)*100)),'% CI:[',up_lim,',',low_lim,']')
@@ -136,7 +138,7 @@ def calc_pvalue(aucs, sigma, alpha, printing = False):
         if printing==True:
             print('\n Not significant')
 
-    return aucs[0], aucs[1], AUC_diff_signed[0], pvalue, significance
+    return aucs[0], aucs[1], AUC_diff_signed[0], pvalue, significance, up_lim, low_lim
 
 def DL_logit_CI(alpha,theta,Var):
     """
@@ -283,16 +285,16 @@ if __name__=='__main__':
     # Perfect case
     probs = np.array([1,1,1,1,0,1,0,0,1,1,1,1,1,1])
     gt = np.array([1,1,1,1,0,1,0,0,1,1,1,1,1,1])
-    AUC_CI(alpha=0.05, ground_truth=gt,predictions=probs,printing=False)
+    AUC_CI(alpha=0.05, ground_truth=gt,predictions=probs,printing=True)
 
     
     #Comparison
     probs1 = np.array([0.5,0.6,0.9,0.1,0.001,0.67,0.87,0.35,0.75,0.5,0.5,0.4,0.6,0.7])
     probs2 = np.array([0.45,0.2,0.99,0.001,0.25,0.8,0.4,0.9,0.7,0.5,0.5,0.4,0.6,0.7])
-    delong_roc_test(gt,probs1,probs2,alpha = 0.05, printing=False)
+    delong_roc_test(gt,probs1,probs2,alpha = 0.05, printing=True)
 
-    AUC_CI(alpha = 0.05,ground_truth=gt,predictions=probs1,printing = False)
-    AUC_CI(alpha = 0.05,ground_truth=gt,predictions=probs2,printing = False)
+    AUC_CI(alpha = 0.05,ground_truth=gt,predictions=probs1,printing = True)
+    AUC_CI(alpha = 0.05,ground_truth=gt,predictions=probs2,printing = True)
 
 # %%
 
