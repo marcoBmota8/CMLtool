@@ -1,7 +1,10 @@
 import os
 import logging
+
 import pandas as pd
 import json
+import matplotlib.pyplot as plt
+
 from CML_tool.Utils import write_pickle, read_pickle
 
 # Configure the logging module
@@ -82,6 +85,20 @@ def file_based_cacheing(path: str, file_name,  extension_desired = '.pkl'):
             else:
                 pass
 
+        return wrapper
+    return decorator
+
+def file_based_figure_saving(path:str, filename:str, format:str,dpi:int):
+    def decorator(save_func):
+        def wrapper(*args, **kwargs):
+            # Call the original function to create the figure
+            save_func(*args, **kwargs)
+            if not os.path.exists(path):
+                # Save the figure to the specified path
+                plt.savefig(os.path.join(path,filename), format=format, dpi=dpi)
+                logging.info(msg=f"Figure SAVED to {path}")
+            else:
+                logging.info(f"Figure already exists at {path}. Figure was not regenerated neither saved.")
         return wrapper
     return decorator
 
