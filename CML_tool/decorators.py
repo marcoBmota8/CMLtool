@@ -89,10 +89,10 @@ def file_based_cacheing(path: str, file_name,  extension_desired = '.pkl'):
     return decorator
 
 def file_based_figure_saving(path:str, filename:str, format:str,dpi:int):
-    def decorator(save_func):
+    def decorator(plot_func):
         def wrapper(*args, **kwargs):
             # Call the original function to create the figure
-            fig,ax = save_func(*args, **kwargs)
+            fig,ax = plot_func(*args, **kwargs)
             if not os.path.exists(path):
                 # Save the figure to the specified path
                 fig.savefig(os.path.join(path,filename), format=format, dpi=dpi)
