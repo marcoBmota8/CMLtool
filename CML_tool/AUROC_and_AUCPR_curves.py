@@ -46,15 +46,16 @@ def plot_AUROC(labels:np.array, predictions:np.array, figsize:tuple, style:str =
     
     interp_fpr = np.linspace(0, 1, 100)
     interp_tprs = np.empty((0,len(interp_fpr)))
+    interp_aucs = []
     
     for tpr, fpr in zip(tprs,fprs):
         interp_tprs = np.vstack([interp_tprs,np.interp(interp_fpr,fpr,tpr)])
     interp_tprs[:,0] = np.zeros(n_boot_iters)
     interp_tprs[:,-1] = np.ones(n_boot_iters)
 
-    # Compute the mean AUROC based on the mean interpolated tpr
+    # Compute the mean AUROC
     interp_tpr_estimate = np.mean(interp_tprs, axis = 0)
-    auroc_estimate = auc(interp_fpr, interp_tpr_estimate)
+    auroc_estimate = np.mean(interp_aucs)
     
     # Confidence interval percentiles
     lower_percentile = 100*alpha/2
@@ -65,8 +66,8 @@ def plot_AUROC(labels:np.array, predictions:np.array, figsize:tuple, style:str =
     upper_ci_tpr = np.percentile(interp_tprs, upper_percentile, axis = 0)
     
     # Compute AUROC confidence intervals
-    lower_ci = np.maximum(auc(interp_fpr, lower_ci_tpr),0)
-    upper_ci = np.minimum(auc(interp_fpr,upper_ci_tpr),1)
+    lower_ci = np.maximum(np.percentile(interp_aucs, lower_percentile),0)
+    upper_ci = np.minimum(np.percentile(interp_aucs, upper_percentile),1)
         
     # Plotting
     fig, ax = plt.subplots(figsize=figsize) 
@@ -134,15 +135,17 @@ def plot_AUCPR(labels:np.array, predictions:np.array, figsize:tuple, style:str, 
     
     interp_recalls = np.linspace(0,1,100)
     interp_precisions = np.empty((0,len(interp_recalls)))
+    interp_aucprs = []
     
     for precision, recall in zip(precisions,recalls):
         interp_precisions = np.vstack([interp_precisions,np.interp(interp_recalls,recall[::-1],precision[::-1])])
+        interp_aucprs.append(auc(interp_recalls,interp_precisions[-1,:]))
     interp_precisions[:,0] = np.ones(n_boot_iters)
     interp_precisions[:,-1] = chance_level*np.ones(n_boot_iters)
 
-    # Compute the mean AUROC
+    # Compute the mean AUCPR
     interp_precission_estimate = np.mean(interp_precisions, axis = 0)
-    aucpr_estimate = auc(interp_recalls, interp_precission_estimate)
+    aucpr_estimate = np.mean(interp_aucprs)
     
     # Confidence interval percentiles
     lower_percentile = 100*alpha/2
@@ -153,8 +156,8 @@ def plot_AUCPR(labels:np.array, predictions:np.array, figsize:tuple, style:str, 
     upper_ci_tpr = np.percentile(interp_precisions, upper_percentile, axis = 0)
     
     # Compute AUROC confidence intervals
-    lower_ci = np.maximum(auc(interp_recalls,lower_ci_tpr),0)
-    upper_ci = np.minimum(auc(interp_recalls,upper_ci_tpr),1)
+    lower_ci = np.maximum(np.percentile(interp_aucprs, lower_percentile),0)
+    upper_ci = np.minimum(np.percentile(interp_aucprs, upper_percentile),1)
         
     # Plotting
     fig, ax = plt.subplots(figsize=figsize) 
