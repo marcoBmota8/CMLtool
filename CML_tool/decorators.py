@@ -92,10 +92,10 @@ def file_based_figure_saving(path:str, filename:str, format:str,dpi:int):
     def decorator(save_func):
         def wrapper(*args, **kwargs):
             # Call the original function to create the figure
-            save_func(*args, **kwargs)
+            fig,ax = save_func(*args, **kwargs)
             if not os.path.exists(path):
                 # Save the figure to the specified path
-                plt.savefig(os.path.join(path,filename), format=format, dpi=dpi)
+                fig.savefig(os.path.join(path,filename), format=format, dpi=dpi)
                 logging.info(msg=f"Figure SAVED to {path}")
             else:
                 logging.info(f"Figure already exists at {path}. Figure was not regenerated neither saved.")
