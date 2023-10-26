@@ -88,18 +88,30 @@ def file_based_cacheing(path: str, file_name,  extension_desired = '.pkl'):
         return wrapper
     return decorator
 
-def file_based_figure_saving(path:str, filename:str, format:str,dpi:int):
+def file_based_figure_saving(filename:str=None, path:str=None, format:str='png', dpi:int=300):
     def decorator(plot_func):
         def wrapper(*args, **kwargs):
+            
             # Call the original function to create the figure
-            fig,ax = plot_func(*args, **kwargs)
-            if not os.path.exists(path):
+            fig, ax = plot_func(*args, **kwargs)
+            
+            # Get path and filename from the decorated function's arguments
+            func_path = kwargs.get('path', path)
+            func_filename = os.path.splitext(kwargs.get('filename', filename))[0]
+            
+            # Raise an exception if either is not passed in the plotting function or decorator
+            if func_filename == None:
+                raise ValueError('No filename passed either in the plotting function or its decorator.')
+            if func_path == None:
+                raise ValueError('No path passed either in the plotting function or its decorator.') 
+        
+            if not os.path.exists(os.path.join(func_path,func_filename+format)):
                 # Save the figure to the specified path
-                fig.savefig(os.path.join(path,filename), format=format, dpi=dpi)
-                logging.info(msg=f"Figure SAVED to {path}")
+                fig.savefig(os.path.join(func_path, func_filename), format=format, dpi=dpi)
+                logging.info(f"Figure SAVED to {func_path}/{func_filename}.{format}")
             else:
-                logging.info(f"Figure already exists at {path}. Figure was not regenerated neither saved.")
+                logging.info(f"Figure already exists at {func_path} as {func_filename+format}. Figure was not regenerated neither saved.")
+                
         return wrapper
     return decorator
-
 
