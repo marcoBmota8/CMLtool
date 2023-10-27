@@ -98,6 +98,7 @@ def file_based_figure_saving(filename:str=None, path:str=None, format:str='png',
             # Get path and filename from the decorated function's arguments
             func_path = kwargs.get('path', path)
             func_filename = os.path.splitext(kwargs.get('filename', filename))[0]
+            func_format = kwargs.get('format', format).split(".")[-1]
             
             # Raise an exception if either is not passed in the plotting function or decorator
             if func_filename == None:
@@ -105,12 +106,12 @@ def file_based_figure_saving(filename:str=None, path:str=None, format:str='png',
             if func_path == None:
                 raise ValueError('No path passed either in the plotting function or its decorator.') 
         
-            if not os.path.exists(os.path.join(func_path,f"{func_filename}.{format}")):
+            if not os.path.exists(os.path.join(func_path,f"{func_filename}.{func_format}")):
                 # Save the figure to the specified path
-                fig.savefig(os.path.join(func_path, f"{func_filename}.{format}"), format=format, dpi=dpi)
-                logging.info(f"Figure SAVED to {func_path}/{func_filename}.{format}")
+                fig.savefig(os.path.join(func_path, f"{func_filename}.{func_format}"), format=func_format, dpi=dpi)
+                logging.info(f"Figure SAVED to {func_path}/{func_filename}.{func_format}")
             else:
-                logging.info(f"Figure already exists at {func_path} as {func_filename}.{format}. Figure was not regenerated neither saved.")
+                logging.info(f"Figure already exists at {func_path} as {func_filename}.{func_format}. Figure was not regenerated neither saved.")
                 
         return wrapper
     return decorator
