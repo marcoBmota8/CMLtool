@@ -105,12 +105,12 @@ def file_based_figure_saving(filename:str=None, path:str=None, format:str='png',
             if func_path == None:
                 raise ValueError('No path passed either in the plotting function or its decorator.') 
         
-            if not os.path.exists(os.path.join(func_path,func_filename+format)):
+            if not os.path.exists(os.path.join(func_path,f"{func_filename}.{format}")):
                 # Save the figure to the specified path
-                fig.savefig(os.path.join(func_path, func_filename), format=format, dpi=dpi)
+                fig.savefig(os.path.join(func_path, f"{func_filename}.{format}"), format=format, dpi=dpi)
                 logging.info(f"Figure SAVED to {func_path}/{func_filename}.{format}")
             else:
-                logging.info(f"Figure already exists at {func_path} as {func_filename+format}. Figure was not regenerated neither saved.")
+                logging.info(f"Figure already exists at {func_path} as {func_filename}.{format}. Figure was not regenerated neither saved.")
                 
         return wrapper
     return decorator
