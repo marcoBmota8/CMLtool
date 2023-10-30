@@ -1,12 +1,13 @@
-# 
 # %%
+import logging
+
+from joblib import Parallel, delayed
+import numpy as np
+from tqdm import tqdm
+
 from shap.maskers import Impute, Independent, Partition
 from shap.explainers import Linear, Exact
 from shap.links import logit, identity
-from joblib import Parallel, delayed
-import logging
-import numpy as np
-from tqdm import tqdm
 
 # %% 
 def calculate_shap_values(
@@ -16,35 +17,38 @@ def calculate_shap_values(
         test_data,
         pretrained = False,
         explainer_type = None,
-        link_function = 'identity',
+        link_function = None,
         feature_perturbation = 'interventional',
         exact_masking = 'independent',
-        algorithm = 'auto',
         n_samples = 1000,
         max_samples = 1000
         ):
     '''
-    Compute Shapley values using Lundberg et al. (2017) KernelSHAP approximation
-    given a trained model, the training (background) data and the test data
-    to make predictions and calculate shap values on.
+    Compute Shapley values using some of the model-agnostic and model-specific approaches 
+    described in Lundberg et al. (2017) given a trained model, the training (background) 
+    data and the test data to make predictions and calculate shap values on.
     
     Args:
-        -model: model instance -> sklearn object
+        -model: model instance (sklearn object) or tuple (coefficients, intercept) for linear models (this requires
+        that explainer_type = 'linear').
         -background_data: training data used to compute its mean and covariance which
         in turn are used to compute conditional expectations (either observational or 
             interventional). -> numpy.array 
         -training_outcome: labels or target values for the training instances. -> numpy.array
         -test_data: Data for which predictions shapley values are calculated. -> numpy.array
         -pretrained: Boolean indicating whether the passed model object is already trained on the
-            background data or not (Default: False) -> boolean
-        -explainer_type: 'linear', 'exact'. Linear can only be used with linear models such as 
-         logistic regression. Exact is model agnostic. (Default: 'exact') -> str
+            background data or not (Default: False) -> bool
+        -explainer_type: 'linear', 'exact'. Linear SHAP can only be used with linear models such as 
+         logistic regression (model-specific). Exact is model-agnostic. -> str #TODO implement kernelSHAP
         -link_function: 'identity' (no-op link function) or 'logit' (useful with classification models
             so that each feature contribution to the probability outcome can be expressed in log-odds) 
             (Default: 'identity') -> str
         -exact_masking: Only relevant to 'exact' explainer: 'independent' or 'correlation'. Whether to 
-            consider features independently (computes Shapley values) or enforce a hierarchical structure among
-            predictors based on correlation (computes Owen values). (Default: 'independent') -> str
+            consider features independent (computes SHAP values as the unconditional expectation via 
+            Shapley sampling values method enumeratign all coealitions. This is t is the correct way to 
+            compute the marginal contribution of a feature to a model prediction from a causal perspective 
+            (Janzing et al. 2020)) or enforce a hierarchical structure among predictors based on correlation 
+            (computes Owen values) when masking. (Default: 'independent') -> str
         -feature_perturbation: Only relevant for 'linear' explainer.
             'interventional' or 'observational'. (Default: 'interventional') -> str
 
@@ -65,27 +69,16 @@ def calculate_shap_values(
               credit for a prediction is only given to the features the model actually uses. The benefit of
               this approach is that it will never give credit to features that are not used by the model but that
               are correlated with (at least one) that are. This option uses the Independent masker.
-        
-        -algorithm: The algorithm used to estimate the Shapley values. 
-        There are many different algorithms that can be used to estimate the Shapley values 
-        (and the related value for constrained games), each of these algorithms have various tradeoffs and 
-        are preferable in different situations. By default the “auto” options attempts to make the best choice
-        given the passed model and masker, but this choice can always be overridden by passing the name of a
-        specific algorithm. Options are “auto”, “permutation”, “partition”, “tree”, or “linear”
-        The type of algorithm used will determine what type of subclass object is returned by this constructor,
-        and you can also build those subclasses directly if you prefer or need more fine grained control over their
-        options. (Default:'auto') -> str
 
-        -n_samples: Only useful for feature_perturbation = 'observational'. Number of samples to use when estimating the transformation matrix used 
-        to account for feature correlations. LinearExplainer uses sampling to estimate a transform 
-        that can then be applied to explain any prediction of the model. (Default:1000) -> int
-
+        -n_samples: Only useful for feature_perturbation = 'observational'. Number of samples to use when estimating
+        the transformation matrix used to account for feature correlations. LinearExplainer uses sampling to estimate 
+        a transform that can then be applied to explain any prediction of the model. (Default:1000) -> int
         -max_samples: The maximum number of samples to use from the passed background data in the independent masker.
         If data has more than max_samples then shap.utils.sample is used to subsample the dataset. 
         The number of samples coming out of the masker (to be integrated over) matches the number of
         samples in the background dataset. 
         This means larger background dataset cause longer runtimes. 
-        Normally about 1, 10, 100, or 1000 background samples are reasonable choices. (Default:1000) -> int
+        Normally about 1000 background samples are reasonable choices. (Default:1000) -> int
         
     Returns:
         -Shapley values as a numpy array of the same shape as test_data.
@@ -98,7 +91,9 @@ def calculate_shap_values(
     elif link_function == 'logit':
         link_function = logit
     else:
-        raise ValueError('Wrong link function. Selected between identity and logit')
+        raise ValueError("""Wrong link function. Select between identity and logit carefully depending on your model.
+                         Note: for logistic regression identity gives probability and logot log-odds.
+                         """)
     
     # Train or use pretrained model
     if not pretrained:
@@ -109,6 +104,7 @@ def calculate_shap_values(
         raise ValueError('Model pretrainined status mispeified.')
 
     # define the explainer
+    # TODO implement the rest of the explainers such as KernelSHAP and the rest of model-specific ones
     if explainer_type == 'linear':
 
         if feature_perturbation == 'observational':
@@ -116,6 +112,7 @@ def calculate_shap_values(
                 data = background_data,
                 method = 'linear'
             )
+            
             feature_perturbation_string = 'correlation_dependent'
 
             explainer = Linear(
@@ -152,9 +149,9 @@ def calculate_shap_values(
     elif explainer_type == 'exact':
 
         #get prediction method from model
-        if hasattr(model, 'predict_proba'):
+        if hasattr(model, 'predict_proba'): # Classifiers
             prediction_function = model.predict_proba
-        elif hasattr(model, 'predict'):
+        elif hasattr(model, 'predict'): # Regressors
             prediction_function = model.predict
         else:
             raise ValueError('Model does not have either predict or predict_proba method.')
@@ -185,7 +182,7 @@ def calculate_shap_values(
                 model = prediction_function,
                 masker = masker,
                 link = link_function,
-                linearize_link = False #TODO with the correlation structure and a "logit" link linearizing throws an error
+                linearize_link = False
             )
         
         else:
@@ -213,7 +210,6 @@ def CI_shap(
         link_function = 'identity',
         feature_perturbation = 'interventional',
         exact_masking = 'independent',
-        algorithm = 'auto',
         n_samples = 1000,
         max_samples = 1000
         ):
@@ -244,15 +240,6 @@ def CI_shap(
         -exact_masking: Only relevant to 'exact' explainer: 'independent' or 'correlation'. Whether to 
             consider features independently (computes Shapley values) or enforce a hierarchical structure among
             predictors based on correlation (computes Owen values). (Default: 'independent') -> str
-        -algorithm: The algorithm used to estimate the Shapley values. 
-            There are many different algorithms that can be used to estimate the Shapley values 
-            (and the related value for constrained games), each of these algorithms have various tradeoffs and 
-            are preferable in different situations. By default the “auto” options attempts to make the best choice
-            given the passed model and masker, but this choice can always be overridden by passing the name of a
-            specific algorithm. Options are “auto”, “permutation”, “partition”, “tree”, or “linear”
-            The type of algorithm used will determine what type of subclass object is returned by this constructor,
-            and you can also build those subclasses directly if you prefer or need more fine grained control over their
-            options. (Default:'auto') -> str
         -n_samples: Only useful for feature_perturbation = 'observational'. Number of samples to use when estimating the transformation matrix used 
             to account for feature correlations. LinearExplainer uses sampling to estimate a transform 
             that can then be applied to explain any prediction of the model. (Default:1000) -> int
@@ -264,8 +251,10 @@ def CI_shap(
             Normally about 1, 10, 100, or 1000 background samples are reasonable choices. (Default:1000) -> int
         
     -Returns:
-        - 3-tuple containing the shapley values point estimate, lower and upper bounds of 
-        the cofidence interval matrices.
+        - point estimate (np.array): mean SHAP values for each feature.
+        - lower bounds (np.array): confidence interval lower bounds for each feature.
+        - upper bounds (np.array): confidence interval upper bounds for each feature.
+
     '''
 
     # Estimate confidence intervals through Monte Carlo sampling via bootstrapped samples of the training dataset
@@ -278,7 +267,6 @@ def CI_shap(
         link_function=link_function,
         feature_perturbation=feature_perturbation,
         exact_masking=exact_masking,
-        algorithm=algorithm,
         n_samples=n_samples,
         max_samples=max_samples
         ) for idx in tqdm([
@@ -286,18 +274,13 @@ def CI_shap(
             ])
         )
     
-    # sample_idx=np.random.choice(background_data.shape[0], size=background_data.shape[0], replace=True), #bootstrapped repeats for the MC sampling
-
     # Calculate the mean of the Shapley values as the point estimate
-    mean_shap_values = np.mean(shap_values_samples, axis=0)
+    estimates = np.mean(shap_values_samples, axis=0)
 
     # Calculate confidence intervals
     lower_percentile = 100*alpha/2
     upper_percentile = 100-lower_percentile
     lower_bound = np.percentile(shap_values_samples, lower_percentile, axis=0)
     upper_bound = np.percentile(shap_values_samples, upper_percentile, axis=0)
-
-    # Create a tuple of point estimate, lower bound, and upper bound
-    shap_summary = (mean_shap_values, lower_bound, upper_bound)     
     
-    return shap_summary
+    return estimates, lower_bound, upper_bound
