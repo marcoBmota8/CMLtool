@@ -1,8 +1,10 @@
 # %%
 import warnings
+import logging
 
 import numpy as np
-import tqdm
+import pandas as pd
+from tqdm import tqdm
 from scipy import stats
 from sklearn.linear_model import LogisticRegression
 from sklearn.base import clone
@@ -71,7 +73,7 @@ def calc_pvalues_LogisticRegression(model, X):
     vcov = np.linalg.inv(np.matrix(H)) # covariance matrix of the coefficients
     se = np.sqrt(np.diag(vcov)) # standard error
     t1 =  coefs/se  # t-statistic
-    p_values = (1 - stats.norm.cdf(abs(t1))) * 2 # p-values (interncept, beta_1, ..., beta_m)
+    p_values = (1 - stats.norm.cdf(abs(t1))) * 2 # p-values (intercept, beta_1, ..., beta_m)
     
     return p_values
 
@@ -116,22 +118,43 @@ class BootstrapLinearModel:
         Args:
             -model (sklearn object): model instance 
         '''
-        self._model = model #immutable attribute
+        # Set the coefficients estimates from the full training data (coef_hat)
+        if not (hasattr(model, "coef_")):
+            raise TypeError("""Model object passed is not fitted. Fit it to the full
+                            training data before bulding its BootstrapLinearModel object.""")
+        elif hasattr(model, "coef_"):
+            self._coef_hat = model.coef_.ravel()
+            if hasattr(model, "intercept_"):
+                self._intercept_hat = model.intercept_
+            else:
+                self._intercept_hat = np.full(1,np.nan)
+            
+        self._model = model 
     
     @property
     def model(self):
         return self._model
     
+    @property
+    def coef_hat(self):
+        return self._coef_hat
+    
+    @property
+    def intercept_hat(self):
+        return self._intercept_hat
+    
     @staticmethod
-    def get_test_data(cls,X,train_idx):
-        return np.setdiff1d(range(X.shape[0]), train_idx)        
+    def get_test_data(X,train_idx):
+        return X[np.setdiff1d(range(X.shape[0]), train_idx),:]        
 
-    def fit(self, X:np.array,y:np.array,n_bootstrap:int=1000):
+    def fit(self, X:np.array,y:np.array,X_HOS:np.array,n_bootstrap:int=1000):
         '''
         Args:
-            -n_bootstrap (float or int): Number of bootsrapped samples to run
             -X (numpy.arrray): training data 
             -y (numpy.array): training labels
+            -X_HOS (numpy.array): Hold out data
+            -n_bootstrap (float or int): Number of bootsrapped samples to run
+
             
         ------------ Notes -------------
         
@@ -141,6 +164,7 @@ class BootstrapLinearModel:
         self.X = X
         self.y = y
         self.n, self.p = X.shape
+        self.X_HOS = X_HOS
         
         #initialize the coefficient, intercepts and indices matrices
         self.coefs = np.array([]).reshape(0,self.p)
@@ -157,60 +181,75 @@ class BootstrapLinearModel:
             model_boot = clone(self.model)
             model_boot.fit(X_bootstrap,y_bootstrap)
 
-            # Stack to the coefficient and interncepts matrix
+            # Stack to the coefficient and intercepts matrix
             self.coefs = np.vstack((self.coefs, model_boot.coef_.ravel()))
-            if model_boot.fit_intercept:
-                self.intercepts = np.vstack((self.intercepts, model_boot.interncept_))
+            if hasattr(self._model, "intercept_"):
+                self.intercepts = np.vstack((self.intercepts, model_boot.intercept_))
+
             # Append the boostrap sample instance (rows) indices 
             self.train_idx.append(bootstrap_sample)
 
     
-    def coef_CIs(self, alpha:float=0.05, nonzero_flag:bool=False):
+    def coef_CI(self, alpha:float=0.05, nonzero_flag:bool=True):
         '''
         Compute confidence intervals and point estimate based on 
         bootstrapping distribution alpha and 1-alpha quantiles. 
         Can provide a flag for nonzero coefficients based on 
         its confidence interval including 0 or not.
-
+               
         Args:
             -alpha (float): test significance level. (Default:0.05)
             -nonzero_flag (bool): whether or not nonzero flags should be returned. (Default=True)
 
         Returns:
-            -mean
-            -confidence_intervals_E (numpy.array): Bootstrap quantiles CI, array of tuples of the form (beta mean,CI_lower,CI_upper)
-            -confidence_intervals_P (numpy.array): Bootstrap pivot-based CI (PREFERRED),array of tuples of the form (beta mean,CI_lower,CI_upper)
-            - flags (numpy.array): array of boolean flags should be
-                returned marking which coefficients are statistically nonzero. Statsitically different
-                from zero at 1-alpha confidence is obtained by checking whether the confidence intervals include 
-                zero or not. Only returned if nonzero_flag = True.
+            -Dataframe with columns:
+                *'theta_mean': coefficient potin estimate (mean)
+                *'quantile_ci': Bootstrap quantiles CI (empirical CIs), array of tuples of the form (beta mean,CI_lower,CI_upper)
+                *'pivot_ci': Bootstrap pivot-based CI (PREFERRED),array of tuples of the form (beta mean,CI_lower,CI_upper)
+                * 'nonzero_quant' and 'nonzero_pivot' (optional): arrays of boolean flags marking which coefficients are statistically nonzero. 
+                Statsitically different from zero at 1-alpha confidence is obtained by checking whether the confidence intervals include 
+                zero or not. Only returned if nonzero_flag=True.
         ''' 
         
         # Calculate confidence intervals
-        #Bootstrap quantiles CI
         lower_percentile = 100*alpha/2
         upper_percentile = 100-lower_percentile
-        lower_bound_E = np.percentile(self.coefs, lower_percentile, axis=0)
-        upper_bound_E = np.percentile(self.coefs, upper_percentile, axis=0)
+        
+        if hasattr(self._model, "intercept_"):
+            betas_star = np.hstack((self.intercepts,self.coefs))
+            betas_hat = np.hstack((self._intercept_hat,self._coef_hat))
+            logging.warning(msg='Careful, first elements refer to the intercept.')
+        else :
+            betas_star = self.coefs
+            betas_hat = self._coef_hat
+        
+        #Bootstrap quantiles CI (empirical confidence intervals)
+        lower_bound_E = np.percentile(betas_star, lower_percentile, axis=0)
+        upper_bound_E = np.percentile(betas_star, upper_percentile, axis=0)
         
         # Pivot based bootstrapp CI
-        estimate = np.mean(self.coefs, axis=0)
-        lower_bound_P = 2*estimate-upper_bound_E
-        upper_bound_P = 2*estimate-lower_bound_E
+        lower_bound_P = 2*betas_hat-upper_bound_E
+        upper_bound_P = 2*betas_hat-lower_bound_E
         
         # list of tuples one per coefficient
-        confidence_intervals_E = [(estimate,lower_bound_E[i], upper_bound_E[i]) for i in range(self.p)]
-        confidence_intervals_P = [(estimate,lower_bound_P[i], upper_bound_P[i]) for i in range(self.p)]
+        confidence_intervals_E = [(lower_bound_E[i], upper_bound_E[i]) for i in range(np.shape(betas_hat)[0])]
+        confidence_intervals_P = [(lower_bound_P[i], upper_bound_P[i]) for i in range(np.shape(betas_hat)[0])]
+        
+        # Bootstrap coefficient point estimate
+        estimate = np.mean(betas_star, axis=0)
 
         if nonzero_flag:
-            return estimate, confidence_intervals_E,\
+            df = pd.DataFrame((estimate, confidence_intervals_E,\
                 confidence_intervals_P,\
-                np.array([not contains_val_CI(CI = (lower_bound_E[i], upper_bound_E[i]), val = 0) for i in range(self.p)]), \
-                np.array([not contains_val_CI(CI = (lower_bound_P[i], upper_bound_P[i]), val = 0) for i in range(self.p)])
+                np.array([not contains_val_CI(CI = (lower_bound_E[i], upper_bound_E[i]), val = 0) for i in range(np.shape(betas_hat)[0])]), \
+                np.array([not contains_val_CI(CI = (lower_bound_P[i], upper_bound_P[i]), val = 0) for i in range(np.shape(betas_hat)[0])]))).T
+            return df.set_axis(['theta_mean','quantile_ci','pivot_ci','nonzero_quant','nonzero_pivot'], axis = 1)
         else:
-            return estimate, confidence_intervals_E, confidence_intervals_P
+            df = pd.DataFrame((estimate, confidence_intervals_E, confidence_intervals_P)).T
+            return df.set_axis(['theta_mean','quantile_ci','pivot_ci'], axis = 1)
+            
         
-    def explain_shap(self, explainer_type:str='linear', link_function:str='logit',
+    def shap_CI(self, explainer_type:str='linear', link_function:str='logit',
                      feature_perturbation:str='interventional', exact_masking:str='independent',
                      alpha:float=0.05, n_jobs:int=1):
         '''
@@ -254,40 +293,131 @@ class BootstrapLinearModel:
             -n_jobs (int): number of threats/workers to use for parallel computation.
             
         Returns:
-            - point estimate (np.array): mean SHAP values for each feature.
-            - lower bounds (np.array): confidence interval lower bounds for each feature.
-            - upper bounds (np.array): confidence interval upper bounds for each feature.
+            - shap_dict (dict):
+                * 'shap_mean' (np.array): point estimate (mean) SHAP values for each feature.
+                * 'quantile_ci' (pandas.DataFrame): Bootstrap quantiles CI (empirical CIs), each element is a tuple (CI_lower,CI_upper).
+                * 'pivot_ci' (pandas.DataFrame): Bootstrap pivot-based CI (PREFERRED), each element is a tuple (CI_lower,CI_upper).
+            - feature_importance ():
+                *
         '''
         
-        for i in range(self.n_bootstrap):
+        # Intercept
+        if hasattr(self._model, "intercept_"):   
+            intercepts = self.intercepts
+            intercept_hat = self._intercept_hat
+        else:
+            intercepts = np.zeros(self.n_bootstrap)
+            intercept_hat = np.zeros(1)
             
-            shap_values_samples = Parallel(n_jobs=n_jobs)(
-                delayed(calculate_shap_values)(
-                        model = (self.coefs[i,:], self.intercepts[i]),
-                        background_data = self.X[self.train_idx[i],:],
-                        training_outcome = self.y[self.train_idx[i]],
-                        test_data=self.get_test_data(self.X,self.train_idx[i]),
-                        explainer_type=explainer_type,
-                        link_function=link_function,
-                        feature_perturbation=feature_perturbation,
-                        exact_masking=exact_masking
-                    ) for i in tqdm(list(range(self.n_bootstrap)))
-                                                          )
-    
-
+        # Bootstrapped samples SHAP values
+        shap_values_samples = np.array(Parallel(n_jobs=n_jobs)(
+            delayed(calculate_shap_values)(
+                model = (self.coefs[i,:], intercepts[i]),
+                background_data = self.X[self.train_idx[i],:],
+                training_outcome = self.y[self.train_idx[i]],
+                test_data=self.X_HOS,
+                explainer_type=explainer_type,
+                link_function=link_function,
+                feature_perturbation=feature_perturbation,
+                exact_masking=exact_masking,
+                pretrained=True
+            ) for i in tqdm(
+                list(range(self.n_bootstrap))
+                )
+        ))
+                
+        # SHAP values for the full model
+        shap_hat = np.array(calculate_shap_values(
+                model = (self._coef_hat, intercept_hat),
+                background_data = self.X,
+                training_outcome = self.y,
+                test_data=self.X_HOS,
+                explainer_type=explainer_type,
+                link_function=link_function,
+                feature_perturbation=feature_perturbation,
+                exact_masking=exact_masking,
+                pretrained=True
+        ))
+        
         # Calculate the mean of the Shapley values as the point estimate
         estimate = np.mean(shap_values_samples, axis=0)
 
         # Calculate confidence intervals
         lower_percentile = 100*alpha/2
         upper_percentile = 100-lower_percentile
-        lower_bound = np.percentile(shap_values_samples, lower_percentile, axis=0)
-        upper_bound = np.percentile(shap_values_samples, upper_percentile, axis=0)
-
         
-        return estimate, lower_bound, upper_bound
+        #Bootstrap quantiles CI (empirical confidence intervals)
+        lower_bound_E = np.percentile(shap_values_samples, lower_percentile, axis=0)
+        upper_bound_E = np.percentile(shap_values_samples, upper_percentile, axis=0)
+        
+        # Pivot based bootstrapp CI
+        lower_bound_P = 2*shap_hat-upper_bound_E
+        upper_bound_P = 2*shap_hat-lower_bound_E
+        
+        # Hold out set SHAP values dataframes
+        shap_dict = {
+            'shap_mean': estimate,
+            'quantile_ci':  pd.DataFrame([(lower_bound_E[i,j], upper_bound_E[i,j]) for j in range(self.p) for i in range(self.X_HOS.shape[0])]),
+            'pivot_ci': pd.DataFrame([(lower_bound_P[i,j], upper_bound_P[i,j]) for j in range(self.p) for i in range(self.X_HOS.shape[0])])
+        }
+        
+        # Feature importance is based on mean |SHAP| value
+        fimp = np.mean(abs(shap_values_samples), axis=1)
+        fimp_hat = np.mean(abs(shap_hat), axis=1)
+        
+        # Bootstrap quantiles CI (empirical confidence intervals)
+        fimp_lower_bound_E = np.percentile(fimp, lower_percentile, axis=0)
+        fimp_upper_bound_E = np.percentile(fimp, upper_percentile, axis=0)
+        
+        # Pivot based bootstrapp CI
+        fimp_lower_bound_P = 2*fimp_shap_hat-fimp_upper_bound_E
+        fimp_upper_bound_P = 2*fimp_shap_hat-fimp_lower_bound_E
+        
+        # Feature importance stats
+        feature_importance = {
+            'fimp_mean': np.mean(fimp, axis=0),
+            'quantile_ci':  pd.DataFrame([(fimp_lower_bound_E[i,j], fimp_upper_bound_E[i,j]) for j in range(self.p) for i in range(self.X_HOS.shape[0])]),
+            'pivot_ci': pd.DataFrame([(fimp_lower_bound_P[i,j], fimp_upper_bound_P[i,j]) for j in range(self.p) for i in range(self.X_HOS.shape[0])])
+        }
+        
+        return shap_dict, feature_importance
+        
+    
+    
 # %%
 
+if __name__ == '__main__':
+    
+    import pandas as pd       
+    from sklearn.datasets import make_classification
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.model_selection import train_test_split
+
+    # Generate noisy data for binary classification
+    X, y = make_classification(n_samples=1000, n_features=8, n_informative=3, n_redundant=0, random_state=42, class_sep=0.8, flip_y=0.2)
+
+    # Split the data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Train a logistic regression model on the training data
+    clf = LogisticRegression(random_state=42)
+    clf.fit(X_train, y_train)
+    
+    # Set the Boostrapping object
+    blm = BootstrapLinearModel(clf)
+    
+    # Run the bootstrapp simulations
+    blm.fit(X,y,X_test,10)
+    
+    # Get coefficient CIs 
+    coefs_df = blm.coef_CI(alpha=0.05, nonzero_flag=True)
+    
+    # Get SHAP values CIs
+    shap_df = blm.shap_CI(n_jobs=24)
+
+
+    
+    
 
 
 
@@ -295,3 +425,5 @@ class BootstrapLinearModel:
 
 
 
+
+# %%
