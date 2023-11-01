@@ -46,6 +46,10 @@ def Grubb_test(data, val_outlier = 0.0, alpha = 0.05):
 
 
 def calc_pvalues_LogisticRegression(model, X):
+    '''
+    Compute the p-value for the regression coefficients of
+    a Logistic regression model under the null hypothesis H0: beta_i != 0.
+    '''
     if isinstance(model, LogisticRegression):
         pass
     else:
@@ -54,7 +58,7 @@ def calc_pvalues_LogisticRegression(model, X):
     if model.penalty != 'none':
         warnings.warn("p-values for penalized logistic regression coeffients are not accurate. \
                         Care must be taken when interpreting the reported values.\
-                        User is advised to not use the results")
+                        User is advised to not use the results.")
     
     probs = model.predict_proba(X)
     n = len(probs)
