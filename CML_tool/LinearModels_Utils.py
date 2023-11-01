@@ -10,7 +10,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.base import clone
 from joblib import Parallel, delayed
 
-from Utils import contains_val_CI
+from Utils import contains_val_CI, twoarrays_2_tupledf
 from ShapUtils import calculate_shap_values
 
 # %%
@@ -357,27 +357,27 @@ class BootstrapLinearModel:
         # Hold out set SHAP values dataframes
         shap_dict = {
             'shap_mean': estimate,
-            'quantile_ci':  pd.DataFrame([(lower_bound_E[i,j], upper_bound_E[i,j]) for j in range(self.p) for i in range(self.X_HOS.shape[0])]),
-            'pivot_ci': pd.DataFrame([(lower_bound_P[i,j], upper_bound_P[i,j]) for j in range(self.p) for i in range(self.X_HOS.shape[0])])
+            'quantile_ci':  twoarrays_2_tupledf(lower_bound_E, upper_bound_E),
+            'pivot_ci': twoarrays_2_tupledf(lower_bound_P, upper_bound_P)
         }
         
         # Feature importance is based on mean |SHAP| value
         fimp = np.mean(abs(shap_values_samples), axis=1)
-        fimp_hat = np.mean(abs(shap_hat), axis=1)
+        fimp_hat = np.mean(abs(shap_hat), axis=0)
         
         # Bootstrap quantiles CI (empirical confidence intervals)
         fimp_lower_bound_E = np.percentile(fimp, lower_percentile, axis=0)
         fimp_upper_bound_E = np.percentile(fimp, upper_percentile, axis=0)
         
         # Pivot based bootstrapp CI
-        fimp_lower_bound_P = 2*fimp_shap_hat-fimp_upper_bound_E
-        fimp_upper_bound_P = 2*fimp_shap_hat-fimp_lower_bound_E
+        fimp_lower_bound_P = 2*fimp_hat-fimp_upper_bound_E
+        fimp_upper_bound_P = 2*fimp_hat-fimp_lower_bound_E
         
         # Feature importance stats
         feature_importance = {
             'fimp_mean': np.mean(fimp, axis=0),
-            'quantile_ci':  pd.DataFrame([(fimp_lower_bound_E[i,j], fimp_upper_bound_E[i,j]) for j in range(self.p) for i in range(self.X_HOS.shape[0])]),
-            'pivot_ci': pd.DataFrame([(fimp_lower_bound_P[i,j], fimp_upper_bound_P[i,j]) for j in range(self.p) for i in range(self.X_HOS.shape[0])])
+            'quantile_ci':  pd.DataFrame([(fimp_lower_bound_E[i], fimp_upper_bound_E[i]) for i in range(self.p)]),
+            'pivot_ci': pd.DataFrame([(fimp_lower_bound_P[i], fimp_upper_bound_P[i]) for i in range(self.p)])
         }
         
         return shap_dict, feature_importance
@@ -413,17 +413,6 @@ if __name__ == '__main__':
     coefs_df = blm.coef_CI(alpha=0.05, nonzero_flag=True)
     
     # Get SHAP values CIs
-    shap_df = blm.shap_CI(n_jobs=24)
-
-
-    
-    
-
-
-
-
-
-
-
+    shap_df, feature_importance = blm.shap_CI(n_jobs=24)
 
 # %%
