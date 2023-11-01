@@ -231,3 +231,13 @@ def contains_val_CI(CI, val):
         return True
     else:
         return False
+
+def twoarrays_2_tupledf(array1:np.array,array2:np.array):
+    # Create a new array to store tuples
+    combined_array = np.empty(array1.shape, dtype=tuple)
+
+    for i in range(array1.shape[0]):
+        for j in range(array1.shape[1]):
+            combined_array[i, j] = (array1[i, j], array2[i, j])
+            
+    return pd.DataFrame(combined_array)
