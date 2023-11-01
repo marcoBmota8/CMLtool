@@ -10,7 +10,6 @@ from shap.maskers import Impute, Independent, Partition
 from shap.explainers import Linear, Exact
 from shap.links import logit, identity
 
-warnings.filterwarnings("ignore", message="scipy._lib.messagestream.MessageStream size changed")
 
 # %% 
 def calculate_shap_values(
@@ -287,7 +286,3 @@ def CI_shap(
     upper_bound = np.percentile(shap_values_samples, upper_percentile, axis=0)
     
     return estimates, lower_bound, upper_bound
-
-
-# Reset the warning filter to its default state (optional)
-warnings.filterwarnings("default")
