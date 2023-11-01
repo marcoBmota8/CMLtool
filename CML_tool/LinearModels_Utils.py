@@ -13,6 +13,7 @@ from joblib import Parallel, delayed
 from Utils import contains_val_CI, twoarrays_2_tupledf
 from ShapUtils import calculate_shap_values
 
+
 # %%
 def Grubb_test(data, val_outlier = 0.0, alpha = 0.05):
     ''''
@@ -361,7 +362,7 @@ class BootstrapLinearModel:
         # Hold out set SHAP values dataframes
         shap_dict = {
             'shap_mean': estimate,
-            'quantile_ci':  twoarrays_2_tupledf(lower_bound_E, upper_bound_E),
+            'quantile_ci': twoarrays_2_tupledf(lower_bound_E, upper_bound_E),
             'pivot_ci': twoarrays_2_tupledf(lower_bound_P, upper_bound_P)
         }
         
@@ -372,17 +373,19 @@ class BootstrapLinearModel:
         # Bootstrap quantiles CI (empirical confidence intervals)
         fimp_lower_bound_E = np.percentile(fimp, lower_percentile, axis=0)
         fimp_upper_bound_E = np.percentile(fimp, upper_percentile, axis=0)
+        fimp_ci_E = [(fimp_lower_bound_E[i], fimp_upper_bound_E[i]) for i in range(self.p)]
         
         # Pivot based bootstrapp CI
-        fimp_lower_bound_P = 2*fimp_hat-fimp_upper_bound_E
-        fimp_upper_bound_P = 2*fimp_hat-fimp_lower_bound_E
+        fimp_lower_bound_P = np.maximum(2*fimp_hat-fimp_upper_bound_E,0) # enforce positivity TODO: Is there a better way to enforce positivity in this CI?
+        fimp_upper_bound_P = np.maximum(2*fimp_hat-fimp_lower_bound_E,0) # idem
+        fimp_ci_P = [(fimp_lower_bound_P[i], fimp_upper_bound_P[i]) for i in range(self.p)]
+
+        # Bootstrap feature importance poitn estimate
+        fimp_estimate = np.mean(fimp, axis=0)
         
         # Feature importance stats
-        feature_importance = {
-            'fimp_mean': np.mean(fimp, axis=0),
-            'quantile_ci':  pd.DataFrame([(fimp_lower_bound_E[i], fimp_upper_bound_E[i]) for i in range(self.p)]),
-            'pivot_ci': pd.DataFrame([(fimp_lower_bound_P[i], fimp_upper_bound_P[i]) for i in range(self.p)])
-        }
+        feature_importance = (pd.DataFrame(
+            (fimp_estimate, fimp_ci_E, fimp_ci_P)).T).set_axis(['fimp_mean','quantile_ci','pivot_ci'], axis = 1)
         
         return shap_dict, feature_importance
         
@@ -411,12 +414,12 @@ if __name__ == '__main__':
     blm = BootstrapLinearModel(clf)
     
     # Run the bootstrapp simulations
-    blm.fit(X,y,X_test,10)
+    blm.fit(X,y,X_test,1000)
     
     # Get coefficient CIs 
     coefs_df = blm.coef_CI(alpha=0.05, nonzero_flag=True)
     
     # Get SHAP values CIs
-    shap_df, feature_importance = blm.shap_CI(n_jobs=24)
+    shap_dict, fimp_df = blm.shap_CI(n_jobs=24)
 
 # %%
