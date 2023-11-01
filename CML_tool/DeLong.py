@@ -96,8 +96,8 @@ def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
     Returns:
        log10(pvalue)
        test statistic
-       CI
-
+       Wald_CI
+       Logistic_logit_CI
     """
     #Individual AUCs
     # I
@@ -123,8 +123,10 @@ def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
     log10_p_value = np.log10(2) + scipy.stats.norm.logsf(z, loc=0, scale=1) / np.log(10)
     pvalue = 10**log10_p_value[0][0]
 
-   #CI
-    up_lim, low_lim = np.ravel(Wald_type_DL_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
+   #CI of the AUC difference.
+    wald_up_lim, wald_low_lim = np.ravel(Wald_type_DL_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
+    logit_up_lim, logit_low_lim = p.ravel(DL_logit_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
+    
     if printing == True:
         print('DeLong test results: log10(p-value)= ', log10_p_value[0][0], '(p-value = ',pvalue,'), AUC difference = ',AUC_diff, 
         str(int((1-alpha)*100)),'% CI:[',up_lim,',',low_lim,']')
@@ -138,7 +140,7 @@ def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
         if printing==True:
             print('\n Not significant')
 
-    return aucs[0], aucs[1], AUC_diff_signed[0], pvalue, significance, up_lim, low_lim
+    return aucs[0], aucs[1], AUC_diff_signed[0], pvalue, significance, wald_low_lim, wald_up_lim, logit_low_lim, logit_up_lim
 
 def DL_logit_CI(alpha,theta,Var):
     """
