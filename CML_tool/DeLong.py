@@ -125,7 +125,7 @@ def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
 
    #CI of the AUC difference.
     wald_up_lim, wald_low_lim = np.ravel(Wald_type_DL_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
-    logit_up_lim, logit_low_lim = p.ravel(DL_logit_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
+    logit_up_lim, logit_low_lim = np.ravel(DL_logit_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
     
     if printing == True:
         print('DeLong test results: log10(p-value)= ', log10_p_value[0][0], '(p-value = ',pvalue,'), AUC difference = ',AUC_diff, 
