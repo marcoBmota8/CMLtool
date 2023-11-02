@@ -10,8 +10,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.base import clone
 from joblib import Parallel, delayed
 
-from Utils import contains_val_CI, twoarrays_2_tupledf
-from ShapUtils import calculate_shap_values
+from .Utils import contains_val_CI, twoarrays_2_tupledf
+from .ShapUtils import calculate_shap_values
 
 
 # %%
@@ -86,9 +86,10 @@ def calc_pvalues_LogisticRegression(model, X):
 class GelmanScaler:
     """
     Implementation of the Gelman 2008 scaler. It enables to scale contnuous and binary variables
-    to the same scale on the contrary to standard scaler. 
+    to the same scale on the contrary to standard scaler. It scales continuous variables but leaves 
+    binary ones untouched.
     """
-    def __init__(self):
+    def __init__(self, binary_indices):
         self.mean = None
         self.std = None
         self.constant_indices = None
@@ -97,7 +98,11 @@ class GelmanScaler:
         self.mean = np.mean(X, axis=0)
         self.std = np.std(X, axis=0)
         self.constant_indices = np.where(self.std < 1e-8)[0]
-
+        if isinstance(X, pd.DataFrame):
+            self.binary_indices = np.array([col for col in X.columns if (set(X[col]) <= {0, 1}) or (set(X[col]) <= {True, False})])
+        elif isintance(X, np.ndarray):
+            self.binary_indices = np.array([i for i in range(data.values.shape[1]) if (set(data.values[:,i]) <= {0, 1}) or (set(data.values[:,i]) <= {True, False})])
+            
     def transform(self, X):
         if self.mean is None or self.std is None or self.constant_indices is None:
             raise ValueError("Scaler has not been fitted. Call fit() before transform().")
@@ -105,7 +110,13 @@ class GelmanScaler:
         # Avoid dividing by std for constant variables
         std_divisor = np.where(self.std >= 1e-8, 2*self.std, 1.0) # we dont use !=0 to account for floating-point numerical precision
         
-        return (X - self.mean) / std_divisor
+        # All columns scaled
+        X_standard_scaled = (X - self.mean) / std_divisor
+        
+        # Keep binary as binary
+        X_gelman_scaled[self.binary_indices] = X[binary_indices] 
+        
+        return X_gelman_scaled
 
     def fit_transform(self, X):
         self.fit(X)
