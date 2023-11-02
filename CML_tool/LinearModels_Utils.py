@@ -93,17 +93,19 @@ class GelmanScaler:
         self.mean = None
         self.std = None
         self.constant_indices = None
+        self.binary_indices = None
 
     def fit(self, X):
         self.mean = np.mean(X, axis=0)
         self.std = np.std(X, axis=0)
         self.constant_indices = np.where(self.std < 1e-8)[0]
         if isinstance(X, pd.DataFrame):
-            self.binary_indices = np.array([col for col in X.columns if (set(X[col]) <= {0, 1}) or (set(X[col]) <= {True, False})])
+            data = X.values
         elif isintance(X, np.ndarray):
-            self.binary_indices = np.array([i for i in range(X.shape[1]) if (set(X[:,i]) <= {0, 1}) or (set(X[:,i]) <= {True, False})])
+            pass
         else:
             raise NotImplementedError("Passed data type not supported.")
+        self.binary_indices = np.array([i for i in range(data.shape[1]) if (set(data[:,i]) <= {0, 1}) or (set(data[:,i]) <= {True, False})])
             
     def transform(self, X):
         if self.mean is None or self.std is None or self.constant_indices is None:
@@ -118,7 +120,7 @@ class GelmanScaler:
         # Keep binary as binary
         X_gelman_scaled = X_standard_scaled.copy()
         if isinstance(X, pd.DataFrame):
-            X_gelman_scaled[self.binary_indices] = X[self.binary_indices] 
+            X_gelman_scaled.iloc[:,self.binary_indices] = X.iloc[:,self.binary_indices] 
         elif isinstance(X, np.ndarray):
             X_gelman_scaled[:,self.binary_indices] = X[:,self.binary_indices] 
         else:
