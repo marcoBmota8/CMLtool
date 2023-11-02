@@ -89,7 +89,7 @@ class GelmanScaler:
     to the same scale on the contrary to standard scaler. It scales continuous variables but leaves 
     binary ones untouched.
     """
-    def __init__(self, binary_indices):
+    def __init__(self):
         self.mean = None
         self.std = None
         self.constant_indices = None
@@ -101,7 +101,9 @@ class GelmanScaler:
         if isinstance(X, pd.DataFrame):
             self.binary_indices = np.array([col for col in X.columns if (set(X[col]) <= {0, 1}) or (set(X[col]) <= {True, False})])
         elif isintance(X, np.ndarray):
-            self.binary_indices = np.array([i for i in range(data.values.shape[1]) if (set(data.values[:,i]) <= {0, 1}) or (set(data.values[:,i]) <= {True, False})])
+            self.binary_indices = np.array([i for i in range(X.shape[1]) if (set(X[:,i]) <= {0, 1}) or (set(X[:,i]) <= {True, False})])
+        else:
+            raise NotImplementedError("Passed data type not supported.")
             
     def transform(self, X):
         if self.mean is None or self.std is None or self.constant_indices is None:
@@ -114,8 +116,14 @@ class GelmanScaler:
         X_standard_scaled = (X - self.mean) / std_divisor
         
         # Keep binary as binary
-        X_gelman_scaled[self.binary_indices] = X[binary_indices] 
-        
+        X_gelman_scaled = X_standard_scaled.copy()
+        if isinstance(X, pd.DataFrame):
+            X_gelman_scaled[self.binary_indices] = X[self.binary_indices] 
+        elif isinstance(X, np.ndarray):
+            X_gelman_scaled[:,self.binary_indices] = X[:,self.binary_indices] 
+        else:
+            raise NotImplementedError("Passed data type not supported.")
+
         return X_gelman_scaled
 
     def fit_transform(self, X):
