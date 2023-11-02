@@ -5,7 +5,6 @@ import logging
 from joblib import Parallel, delayed
 import numpy as np
 from tqdm import tqdm
-
 from shap.maskers import Impute, Independent, Partition
 from shap.explainers import Linear, Exact
 from shap.links import logit, identity
