@@ -100,12 +100,12 @@ class GelmanScaler:
         self.std = np.std(X, axis=0)
         self.constant_indices = np.where(self.std < 1e-8)[0]
         if isinstance(X, pd.DataFrame):
-            data = X.values
+            data=X.values
         elif isintance(X, np.ndarray):
-            pass
+            data=X.copy()
         else:
             raise NotImplementedError("Passed data type not supported.")
-        self.binary_indices = np.array([i for i in range(data.shape[1]) if (set(data[:,i]) <= {0, 1}) or (set(data[:,i]) <= {True, False})])
+        self.binary_indices = np.array([i for i in range(data.shape[1]) if (set(data[:,i]) == {0, 1}) or (set(data[:,i]) == {True, False})])
             
     def transform(self, X):
         if self.mean is None or self.std is None or self.constant_indices is None:
