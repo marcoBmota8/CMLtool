@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.metrics import confusion_matrix
+import mct
 
 
 def odds_ratio_from_DF(df, treatment, diagnosis):
@@ -36,7 +37,6 @@ def binary_classifier_metrics(threshold, y_true,probas):
     return accuracy, sensitivity, specificity,ppv,npv,f1_score
 
 def ICI_calculation(prob_samples,labels,positive_label,resolution = 0.01,bandwidth = 0.05, **kde_args):
-    import mct
     '''Assumes a gaussian kernel
     and that prob_samples are passed in the same order as labels
     '''
