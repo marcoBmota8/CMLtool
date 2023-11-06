@@ -89,12 +89,12 @@ def plot_AUROC(labels:np.array, predictions:np.array, figsize:tuple, style:str =
     
     return fig, ax
    
-def compute_aucpr_sample(sample_idx, data, labels):
+def compute_AUPRC_sample(sample_idx, data, labels):
     precision, recall, _ = precision_recall_curve(labels[sample_idx], data[sample_idx])
     return precision, recall 
     
-def plot_AUCPR(labels:np.array, predictions:np.array, figsize:tuple, style:str, n_boot_iters:float or int=5000, alpha:float=0.05, n_jobs:int=1):
-    """ Plots the AUCPR curve for a given set of labels and predictions.
+def plot_AUPRC(labels:np.array, predictions:np.array, figsize:tuple, style:str, n_boot_iters:float or int=5000, alpha:float=0.05, n_jobs:int=1):
+    """ Plots the AUPRC curve for a given set of labels and predictions.
         Confidence 
     Args:
         - labels (np.array): The true labels of the data.
@@ -120,7 +120,7 @@ def plot_AUCPR(labels:np.array, predictions:np.array, figsize:tuple, style:str, 
     with ThreadPoolExecutor(max_workers=n_jobs) as executor:
         precisions, recalls = zip(*list(
             executor.map(
-                compute_aucpr_sample,
+                compute_AUPRC_sample,
                 [np.random.choice(
                     np.arange(len(predictions)),
                     len(predictions), 
@@ -140,9 +140,9 @@ def plot_AUCPR(labels:np.array, predictions:np.array, figsize:tuple, style:str, 
     interp_precisions[:,0] = np.ones(n_boot_iters)
     interp_precisions[:,-1] = chance_level*np.ones(n_boot_iters)
 
-    # Compute the mean AUCPR
+    # Compute the mean AUPRC
     interp_precission_estimate = np.mean(interp_precisions, axis = 0)
-    aucpr_estimate = auc(interp_recalls, interp_precission_estimate)
+    AUPRC_estimate = auc(interp_recalls, interp_precission_estimate)
 
     # Confidence interval percentiles
     lower_percentile = 100*alpha/2
@@ -159,7 +159,7 @@ def plot_AUCPR(labels:np.array, predictions:np.array, figsize:tuple, style:str, 
     # Plotting
     fig, ax = plt.subplots(figsize=figsize) 
     ax.axhline(y=chance_level, xmin=0,xmax=1, linestyle="--", lw=2, color="r", label=r"Chance: %0.3f" % chance_level, alpha=0.8)
-    ax.plot(interp_recalls, interp_precission_estimate, color="b",label=r"AUCPR: %0.3f" % aucpr_estimate,lw=2,alpha=1,)
+    ax.plot(interp_recalls, interp_precission_estimate, color="b",label=r"AUPRC: %0.3f" % AUPRC_estimate,lw=2,alpha=1,)
     if style == 'science':
         plt.style.use("science")
         ax.fill_between(interp_recalls, lower_ci_precission, upper_ci_precission, color="dodgerblue", alpha=0.3, label=r"%d%s CI: [%0.3f, %0.3f]" % (int((1-alpha)*100),'\%', lower_ci, upper_ci))
@@ -191,7 +191,7 @@ if __name__ == "__main__":
            n_jobs = 24
            )
     
-    plot_AUCPR(predictions=preds,
+    plot_AUPRC(predictions=preds,
             labels=labels,
             style='science',
             figsize=(7,7),
