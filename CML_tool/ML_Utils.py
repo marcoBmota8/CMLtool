@@ -36,25 +36,6 @@ def binary_classifier_metrics(threshold, y_true,probas):
 
     return accuracy, sensitivity, specificity,ppv,npv,f1_score
 
-def ICI_calculation(prob_samples,labels,positive_label,resolution = 0.01,bandwidth = 0.05, **kde_args):
-    '''Assumes a gaussian kernel
-    and that prob_samples are passed in the same order as labels
-    '''
-    x_min = max((0, np.amin(prob_samples) - resolution))
-    x_max = min((1, np.amax(prob_samples) + resolution))
-    x_values = np.arange(x_min, x_max, step= resolution)
-    positives_probs = prob_samples[labels==positive_label]
-
-    all_intensity = mct._compute_intensity(x_values=x_values, probs=prob_samples,
-                                       kernel = 'gaussian',bandwidth=bandwidth,
-                                       **kde_args)
-    pos_intensity = mct._compute_intensity(x_values = x_values, probs =positives_probs,
-                                           kernel='gaussian', bandwidth = bandwidth,
-                                           **kde_args)
-
-    ICI = mct.compute_ici(orig=x_values, calibrated=pos_intensity/all_intensity,all_intensity=all_intensity)
-    return ICI
-
 def overlap_CI(CI1, CI2): 
     '''
     Returns whether two confidence intervals overlap or not.
