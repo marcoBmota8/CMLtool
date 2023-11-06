@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import norm
 from sklearn.metrics import confusion_matrix
 import mct
 
@@ -71,3 +72,19 @@ def contains_val_CI(CI, val):
         return True
     else:
         return False
+
+def ci_proportion(numerator, denominator,alpha):
+    '''
+    This is the recommended method to obtain the confidence interval of
+    a proportion (such as PPV, sensitivity, specificity, etc) in `Statistics with confidence`
+    by Altman, Machin, Bryant and  Gardner 2000. The theory is depicted in chapter 6 pages 46-47.
+    '''
+    z = norm.ppf(1-alpha/2)
+    p=numerator/denominator
+    q=1-p
+    
+    A = 2*numerator+z**2
+    B = z*np.sqrt((z**2*4*numerator*q))
+    C = 2*(denominator+z**2)
+    
+    return ((A-B)/C, (A+B)/C)
