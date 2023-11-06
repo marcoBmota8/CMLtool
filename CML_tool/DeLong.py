@@ -129,7 +129,7 @@ def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
     
     if printing == True:
         print('DeLong test results: log10(p-value)= ', log10_p_value[0][0], '(p-value = ',pvalue,'), AUC difference = ',AUC_diff, 
-        str(int((1-alpha)*100)),'% CI:[',up_lim,',',low_lim,']')
+        str(int((1-alpha)*100)),'% wald type CI:[',wald_up_lim,',',wald_low_lim,'], logit CI:[', logit_low_lim,',',logit_up_lim,'].')
 
     if pvalue<alpha:
         significance = True
