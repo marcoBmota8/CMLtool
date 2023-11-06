@@ -10,11 +10,17 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.base import clone
 from joblib import Parallel, delayed
 
-from .Utils import contains_val_CI, twoarrays_2_tupledf
-from .ShapUtils import calculate_shap_values
+from CML_tool.Utils import twoarrays_2_tupledf
+from CML_tool.ML_Utils import contains_val_CI
+from CML_tool.ShapUtils import calculate_shap_values
 
 
 # %%
+def replace_values_in_coef_array(values, positions, out_array_length, fill_value = 0.0):
+    out_array = np.full((1,out_array_length),fill_value)
+    out_array[0,positions] = values
+    return out_array
+
 def Grubb_test(data, val_outlier = 0.0, alpha = 0.05):
     ''''
     Two-sided Grubb's test to determine whether a value is 
@@ -89,48 +95,76 @@ class GelmanScaler:
     to the same scale on the contrary to standard scaler. It scales continuous variables but leaves 
     binary ones untouched.
     """
-    def __init__(self):
-        self.mean = None
-        self.std = None
+    def __init__(self, eps=1e-8):
+        self._mean = None
+        self._stdev = None
         self.constant_indices = None
         self.binary_indices = None
+        self.eps = eps
+    
+    @property
+    def mean_(self):
+        return self._mean
 
-    def fit(self, X):
-        self.mean = np.mean(X, axis=0)
-        self.std = np.std(X, axis=0)
-        self.constant_indices = np.where(self.std < 1e-8)[0]
+    @property
+    def stdev_(self):
+        return self._stdev
+    
+    @staticmethod
+    def get_binary_indices(X):
         if isinstance(X, pd.DataFrame):
             data=X.values
-        elif isintance(X, np.ndarray):
+        elif isinstance(X, np.ndarray):
             data=X.copy()
         else:
             raise NotImplementedError("Passed data type not supported.")
-        self.binary_indices = np.array([i for i in range(data.shape[1]) if (set(data[:,i]) == {0, 1}) or (set(data[:,i]) == {True, False})])
+        return np.array([i for i in range(data.shape[1]) if (set(data[:,i]) == {0, 1}) or (set(data[:,i]) == {True, False})])
+        
+    def fit(self, X):
+        self._mean = np.mean(X, axis=0)
+        self._stdev = np.std(X, ddof=0, axis=0)
+        self.constant_indices = np.where(self._stdev < self.eps)[0]
+        self.binary_indices = self.get_binary_indices(X)
+        self.std_divisor = np.where(self.stdev_ >= self.eps, 2*self.stdev_, 1.0) # Avoid dividing by 0 for constant variables
+        
+        return self
             
     def transform(self, X):
-        if self.mean is None or self.std is None or self.constant_indices is None:
+        if self.mean_ is None or self.stdev_ is None or self.constant_indices is None:
             raise ValueError("Scaler has not been fitted. Call fit() before transform().")
         
-        # Avoid dividing by std for constant variables
-        std_divisor = np.where(self.std >= 1e-8, 2*self.std, 1.0) # we dont use !=0 to account for floating-point numerical precision
-        
         # All columns scaled
-        X_standard_scaled = (X - self.mean) / std_divisor
+        X_scaled = (X - self.mean_) / self.std_divisor
         
         # Keep binary as binary
-        X_gelman_scaled = X_standard_scaled.copy()
         if isinstance(X, pd.DataFrame):
-            X_gelman_scaled.iloc[:,self.binary_indices] = X.iloc[:,self.binary_indices] 
+            X_scaled.iloc[:,self.binary_indices] = X.iloc[:,self.binary_indices] 
         elif isinstance(X, np.ndarray):
-            X_gelman_scaled[:,self.binary_indices] = X[:,self.binary_indices] 
+            X_scaled[:,self.binary_indices] = X[:,self.binary_indices] 
         else:
             raise NotImplementedError("Passed data type not supported.")
 
-        return X_gelman_scaled
+        return X_scaled
 
     def fit_transform(self, X):
         self.fit(X)
         return self.transform(X)
+    
+    def inverse_transform(self, X):
+        assert np.array_equal(self.get_binary_indices(X), self.binary_indices), \
+        'Fitted data binary variables are different than passed data for inverse tranform.'
+        
+        # Reverse the standard scaling for all columns
+        X_reverted = X * self.std_divisor + self.mean_
+        
+        if isinstance(X, pd.DataFrame):
+            X_reverted.iloc[:,self.binary_indices] = X.iloc[:,self.binary_indices] 
+        elif isinstance(X, np.ndarray):
+            X_reverted[:,self.binary_indices] = X[:,self.binary_indices] 
+        else:
+            raise NotImplementedError("Passed data type not supported.")
+
+        return X_reverted
     
     
 class BootstrapLinearModel:
