@@ -10,7 +10,7 @@ from CML_tool.Utils import write_pickle, read_pickle
 # Configure the logging module
 logging.basicConfig(level=logging.INFO)
 
-def file_based_cacheing(path: str, file_name,  extension_desired = '.pkl'):
+def file_based_cacheing(path:str=None, filename:str=None,  extension_desired:str='.pkl'):
     """
     File based cacheing. 
         1. It attempts to read the file and return the object.
@@ -34,56 +34,59 @@ def file_based_cacheing(path: str, file_name,  extension_desired = '.pkl'):
     """
     def decorator(func):
         def wrapper(*args, **kwargs):
-            if (path is not None) and (file_name is not None):
+            # If path, filename and extension argument are passed to the function instance take those instead of decorator values
+            path_fn = kwargs.get('path', path)
+            filename_string = kwargs.get('filename', filename)
+            filename_fn = os.path.splitext(filename_string)[0]
+            extension_desired_fn = kwargs.get('extension_desired', extension_desired)
+                        
+            if (path_fn is not None) and (filename_fn is not None):
         
-                try:
-                    if 'pkl' in extension_desired:
-                        obj_var = read_pickle(path=path, filename=file_name)
+                try: # Try to retrieve the object
+                    if 'pkl' in extension_desired_fn:
+                        obj_var = read_pickle(path=path_fn, filename=filename_fn+".pkl")
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
 
-                    elif 'cvs' in extension_desired:
-                        obj_var = pd.read_csv(filepath = os.path.join(path,file_name))
+                    elif 'cvs' in extension_desired_fn:
+                        obj_var = pd.read_csv(filepath = os.path.join(path_fn,filename_fn+".csv"))
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
                     
-                    elif 'json' in extension_desired:
-                        with open(os.path.join(path, file_name),'r') as openfile:
+                    elif 'json' in extension_desired_fn:
+                        with open(os.path.join(path_fn, filename_fn+".json"),'r') as openfile:
                             obj_var = json.load(openfile)
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
 
                     else:
                         raise ValueError('File not found or file caching failed.')
 
-                except:
+                except: # Run the function and save the object
                     logging.info(msg = "Executing "+func.__name__+" ..." )
-                    obj_var = func(*args, **kwargs)
-                    # User-specified saving
+                    obj_var = func(*args, **kwargs) # run the function and obtain the resulting object
                     try:
-                        if 'pkl' in extension_desired:
-                            os.makedirs(path, exist_ok=True) # Ensure that the host folder exists
-                            write_pickle(object = obj_var, path=path, filename=file_name)
+                        if 'pkl' in extension_desired_fn:
+                            os.makedirs(path_fn, exist_ok=True) # Ensure that the host folder exists
+                            write_pickle(object = obj_var, path=path_fn, filename=filename_fn+'.pkl')
 
-                        elif 'cvs' in extension_desired:
-                            os.makedirs(path, exist_ok=True) # Ensure that the host folder exists
-                            obj_var.to_csv(path_or_buf=os.path.join(path,file_name))
+                        elif 'cvs' in extension_desired_fn:
+                            os.makedirs(path_fn, exist_ok=True) # Ensure that the host folder exists
+                            obj_var.to_csv(path_or_buf=os.path.join(path_fn,filename_fn+".csv"))
 
-                        elif 'json' in extension_desired:
-                            os.makedirs(path, exist_ok=True) # Ensure that the host folder exists
-                            with open(os.path.join(path, file_name), "w") as outfile:
+                        elif 'json' in extension_desired_fn:
+                            os.makedirs(path_fn, exist_ok=True) # Ensure that the host folder exists
+                            with open(os.path.join(path_fn, filename_fn+".json"), "w") as outfile:
                                 json.dump(obj_var, outfile)
 
                         else:
                             raise ValueError('No developed option is valid for input combination of python object and desired extension.')
-                    # Default saving
-                    except:
-                        logging.info(msg = "Defaulting to pickle saving...")
-                        file_name_except = os.path.splitext(file_name)[0]
-                        write_pickle(object = obj_var, path=path, filename=file_name_except+'.pkl')
+                    except: # Default saving is in ".pkl" format
+                        logging.info(msg = f"Defaulting to pickle saving as: {os.path.join(path_fn,filename_fn+'.pkl')}")
+                        write_pickle(object = obj_var, path=path_fn, filename=filename_fn+'.pkl')
 
                     logging.info(msg = "Function "+func.__name__+" EXECUTION COMPLETE & RESULT FILE SAVED.")
 
                 return obj_var
             else:
-                pass
+                raise ValueError(f'Either "path", "filename" arguments were not passed to the decorator or instance of the function {func.__name__}.')
 
         return wrapper
     return decorator
