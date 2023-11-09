@@ -37,7 +37,10 @@ def file_based_cacheing(path:str=None, filename:str=None,  extension_desired:str
             # If path, filename and extension argument are passed to the function instance take those instead of decorator values
             path_fn = kwargs.get('path', path)
             filename_string = kwargs.get('filename', filename)
-            filename_fn = os.path.splitext(filename_string)[0]
+            if filename_string is not None:
+                filename_fn = os.path.splitext(filename_string)[0]
+            else:
+                filename_fn=None
             extension_desired_fn = kwargs.get('extension_desired', extension_desired)
                         
             if (path_fn is not None) and (filename_fn is not None):
