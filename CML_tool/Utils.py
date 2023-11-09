@@ -143,3 +143,18 @@ def twoarrays_2_tupledf(array1:np.array,array2:np.array):
             combined_array[i, j] = (array1[i, j], array2[i, j])
             
     return pd.DataFrame(combined_array)
+
+def math_w_tuple(t:tuple, op:str, num:float):
+    '''
+    Function that allow to multiply or divide a tuple by a contstant.
+    ''' 
+    if op == 'divide':
+        return tuple(elem/num for elem in t)
+    elif op == 'multiply':
+        return tuple(elem*num for elem in t)
+    elif op == 'sum':
+        return tuple(elem+num for elem in t)
+    elif op == 'susbtract':
+        return tuple(elem-num for elem in t)
+    else:
+        raise NotImplementedError('Possible operations: "divide", "multiply","sum" and "substract".')
