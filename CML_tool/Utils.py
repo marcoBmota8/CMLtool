@@ -6,6 +6,9 @@ import numpy as np
 import json
 import pickle
 
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 
 def chunked_dataframe(df, chunk_size):
     for i in range(0, len(df)-chunk_size, chunk_size):
@@ -86,14 +89,14 @@ def save_df_w_metadata(df:pd.DataFrame, path:str=None, filename:str=None, metada
                 # Save metadata. 
                 # It overides if a matedata file already exists for the DataFrame to avoid matching confusion with residual files from previous runs
                 metadata_filename = f"{filename}_metadata.json"        
-                logging.info(msg = f"Saving metadata for as {metadata_filename}.json at {path} ..." )
+                logging.info(msg = f"Saving metadata for as {metadata_filename} at {path} ..." )
                 with open(os.path.join(path,metadata_filename), "w") as f:
                     json.dump(metadata, f, indent=4)
             else: 
                 raise logging.info('No metadata passed, so none was saved.')
                 
     else:
-        raise ValueError('No path or filename passed.')
+        raise ValueError('No path and/or filename passed.')
 
 def oredered_features(selected_features,coefs, how):
     '''
