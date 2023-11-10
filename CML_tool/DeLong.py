@@ -5,6 +5,8 @@ import scipy.special
 import xgboost as xgb
 from typing import Tuple
 
+from CML_tool.ML_Utils import contains_val_CI
+
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -82,7 +84,7 @@ def fastDeLong(predictions_sorted_transposed, label_1_count):
     v10 = 1.0 - (tz[:, m:] - ty[:, :]) / m
     sx = np.cov(v01)
     sy = np.cov(v10)
-    delongcov = sx / m + sy / n #covariance matrix of both AUC1 & AUC2
+    delongcov = sx / m + sy / n #covariance matrix of AUCs to compare
     return aucs, delongcov
 
 def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
@@ -91,23 +93,32 @@ def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
     and the p-value log(10) of the test
 
     Args:
-       aucs: 1D array of AUCs
-       sigma: AUC DeLong covariance matrix
+       aucs (numpy.array): AUCs to compare
+       sigma_sq (numpy.array): AUC DeLong covariance matrix
+       alpha(float): sinificance level
+       printing (bool): Whether or not to print out the test statistics and result.
     Returns:
-       log10(pvalue)
-       test statistic
-       Wald_CI
-       Logistic_logit_CI
+        auc1 (float): First AUC point estimate
+        auc2 (float): First AUC point estimate
+        AUC_diff_signed (float): Difference in AUCs with sign (auc1-auc2)
+        pvalue: p-value of the DeLong test
+        significance (bool): Whether or not the test is significant at the significance level requested. 
+        Wald_CI (tuple): Wald confidence interval of the AUC difference.
+            Must use if looking whether or not the confidence interval of the difference crosses 0
+        Logistic_CI (tuple): Logistic confidence interval of the AUC difference 
+            Important! Do not use for looking to whether or not the CI crosses 0, it will never do so as it 
+            confines values in [0,1].
+        ci_crossing (bool): Whether or not the Wald confidence interval crosses zero or not.
     """
     #Individual AUCs
     # I
-    up_lim_AUC1, low_lim_AUC1 = np.ravel(DL_logit_CI(alpha = alpha, theta=aucs[0], Var=sigma_sq[0,0]))
+    up_lim_AUC1, low_lim_AUC1 = np.ravel(DL_logistic_CI(alpha = alpha, theta=aucs[0], Var=sigma_sq[0,0]))
     if printing == True:
         print('AUC 1 = ', aucs[0], 'variance = ',sigma_sq[0,0],
         str(int((1-alpha)*100)),'% CI:[',low_lim_AUC1,',',up_lim_AUC1,'] \n')
 
     #II
-    up_lim_AUC2, low_lim_AUC2 = np.ravel(DL_logit_CI(alpha = alpha, theta=aucs[1], Var=sigma_sq[1,1]))
+    up_lim_AUC2, low_lim_AUC2 = np.ravel(DL_logistic_CI(alpha = alpha, theta=aucs[1], Var=sigma_sq[1,1]))
     if printing == True:
         print('AUC 2 = ', aucs[1], 'variance = ',sigma_sq[1,1],
         str(int((1-alpha)*100)),'% CI:[',low_lim_AUC2,',',up_lim_AUC2,']\n')
@@ -125,11 +136,11 @@ def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
 
    #CI of the AUC difference.
     wald_up_lim, wald_low_lim = np.ravel(Wald_type_DL_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
-    logit_up_lim, logit_low_lim = np.ravel(DL_logit_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
+    logistic_up_lim, logistic_low_lim = np.ravel(DL_logistic_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
     
     if printing == True:
         print('DeLong test results: log10(p-value)= ', log10_p_value[0][0], '(p-value = ',pvalue,'), AUC difference = ',AUC_diff, 
-        str(int((1-alpha)*100)),'% wald type CI:[',wald_up_lim,',',wald_low_lim,'], logit CI:[', logit_low_lim,',',logit_up_lim,'].')
+        str(int((1-alpha)*100)),'% wald type CI:[',wald_up_lim,',',wald_low_lim,'], logistic CI:[', logistic_low_lim,',',logistic_up_lim,'].')
 
     if pvalue<alpha:
         significance = True
@@ -139,10 +150,12 @@ def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
         significance = False
         if printing==True:
             print('\n Not significant')
+            
+    ci_crossing = contains_val_CI((wald_low_lim, wald_up_lim),0)
 
-    return aucs[0], aucs[1], AUC_diff_signed[0], pvalue, significance, wald_low_lim, wald_up_lim, logit_low_lim, logit_up_lim
+    return aucs[0], aucs[1], AUC_diff_signed[0], pvalue, significance, (wald_low_lim, wald_up_lim), (logistic_low_lim, logistic_up_lim), ci_crossing
 
-def DL_logit_CI(alpha,theta,Var):
+def DL_logistic_CI(alpha,theta,Var):
     """
 
     Since the AUC is restricted to [0,1], Pepe et al 2003 has argued that an asymmetric confidence
@@ -212,6 +225,8 @@ def delong_roc_test(ground_truth, predictions_one, predictions_two,alpha, printi
           np.array of floats of the probability of being class 1
        predictions_two: predictions of the second model,
           np.array of floats of the probability of being class 1
+    Returns:
+        
 
     """
     order, label_1_count, _ = compute_ground_truth_statistics(ground_truth)
@@ -222,7 +237,7 @@ def delong_roc_test(ground_truth, predictions_one, predictions_two,alpha, printi
 
 def AUC_CI(ground_truth,predictions,alpha, printing = False):
     """Calculate DeLong AUROC and provide
-    both logit and wald confidence intervals.
+    both logistic and wald confidence intervals.
     
     Args:
         -ground_truth: array of true labels
@@ -235,19 +250,19 @@ def AUC_CI(ground_truth,predictions,alpha, printing = False):
         -Variance
         -Wald confidence interval lower limit
         -Wald confidence interval upper limit
-        -Logit confidence interval lower limit
-        -Logit confidence interval upper limit
+        -logistic confidence interval lower limit
+        -logistic confidence interval upper limit
 
     """
     AUC, variance = delong_roc_variance(ground_truth,predictions)
     low_lim_wald, up_lim_wald = np.ravel(Wald_type_DL_CI(alpha = alpha,theta = AUC,Var = variance))
-    low_lim_logit, up_lim_logit= np.ravel(DL_logit_CI(alpha = alpha,theta = AUC,Var = variance))
+    low_lim_logistic, up_lim_logistic= np.ravel(DL_logistic_CI(alpha = alpha,theta = AUC,Var = variance))
     if printing == True:    
         print('AUC = ', AUC, 'variance = ',variance, '\n',
               'Wald type:', str(int((1-alpha)*100)),'% CI:[',low_lim_wald,',',up_lim_wald,'] \n'
-              'Logit type:', str(int((1-alpha)*100)),'% CI:[',low_lim_logit,',',up_lim_logit,'] \n')
+              'logistic type:', str(int((1-alpha)*100)),'% CI:[',low_lim_logistic,',',up_lim_logistic,'] \n')
 
-    return AUC, variance, low_lim_wald, up_lim_wald, low_lim_logit, up_lim_logit
+    return AUC, variance, low_lim_wald, up_lim_wald, low_lim_logistic, up_lim_logistic
 
 def DeLong_AUROC(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
