@@ -135,8 +135,8 @@ def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
     pvalue = 10**log10_p_value[0][0]
 
    #CI of the AUC difference.
-    wald_up_lim, wald_low_lim = np.ravel(Wald_type_DL_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
-    logistic_up_lim, logistic_low_lim = np.ravel(DL_logistic_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
+    wald_low_lim, wald_up_lim = np.ravel(Wald_type_DL_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
+    logistic_low_lim, logistic_up_lim = np.ravel(DL_logistic_CI(alpha = alpha, theta = AUC_diff, Var = sigma_diff**2))
     
     if printing == True:
         print('DeLong test results: log10(p-value)= ', log10_p_value[0][0], '(p-value = ',pvalue,'), AUC difference = ',AUC_diff, 
@@ -151,7 +151,7 @@ def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
         if printing==True:
             print('\n Not significant')
             
-    ci_crossing = not contains_val_CI((wald_low_lim, wald_up_lim),0)
+    ci_crossing = contains_val_CI((wald_low_lim, wald_up_lim),0)
 
     return aucs[0], aucs[1], AUC_diff_signed[0], pvalue, significance, (wald_low_lim, wald_up_lim), (logistic_low_lim, logistic_up_lim), ci_crossing
 
