@@ -151,7 +151,7 @@ def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
         if printing==True:
             print('\n Not significant')
             
-    ci_crossing = contains_val_CI((wald_low_lim, wald_up_lim),0)
+    ci_crossing = not contains_val_CI((wald_low_lim, wald_up_lim),0)
 
     return aucs[0], aucs[1], AUC_diff_signed[0], pvalue, significance, (wald_low_lim, wald_up_lim), (logistic_low_lim, logistic_up_lim), ci_crossing
 
