@@ -59,12 +59,14 @@ def overlap_CI(CI1, CI2):
 def contains_val_CI(CI, val):
     '''
     Returns whether a confidence intervals contains a value or not.
+    Assumes that confidence interval limits are ordered in increasing order,
+    i.e. ci[0]<=ci[1].
     
     Args:
         -CI (tuple): Frist confidence interval (
         -val (float): value to check for
     Returns:
-        Boolean flag
+        Boolean flag stating whether or not the value is within the CI or not.
     '''
     if CI[0] < val < CI[1]:
         return True 
