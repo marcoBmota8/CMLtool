@@ -1,4 +1,5 @@
 import os
+import logging
 
 import pandas as pd
 import numpy as np
@@ -55,10 +56,9 @@ def read_pickle(path, filename):
                     break
         return pd.concat(loaded_chunks)
 
-def save_dataframe_to_csv(df, filename, metadata=None, sep=',', header=True, index=True, encoding='utf-8'):
+def save_df_w_metadata(df:pd.DataFrame, path:str=None, filename:str=None, metadata:dict=None, sep=',', header=True, index=True, encoding='utf-8'):
     """
     Save a pandas DataFrame to a CSV file with optional metadata.
-    If the file already exists, a version number is appended to the filename.
     Args:
         -param df: the DataFrame to save
         -param filename: the filename to save the CSV file as
@@ -68,24 +68,32 @@ def save_dataframe_to_csv(df, filename, metadata=None, sep=',', header=True, ind
         -param index: whether to include the row index in the CSV file
         -param encoding: the character encoding to use when saving the CSV file
     """
-    if os.path.isfile(f"{filename}.csv"):
-        # File already exists, append a version number
-        i = 1
-        while os.path.isfile(f"{filename}_v{i}.csv"):
-            i += 1
-        versioned_filename = f"{filename}_v{i}.csv"
-        if metadata:
-            metadata_filename = f"{filename}_v{i}.json"
-            with open(metadata_filename, "w") as f:
-                json.dump(metadata, f, indent=4)
+    filename = os.path.splitext(filename)[0]
+    
+    if (path is not None) and (filename is not None):
+    
+        if os.path.exists(os.path.join(path,filename+".csv")): # Check if DataFrame exits
+            logging.info(msg = f"{filename}.csv already exists. Neither the df nor metadata were saved.")
+            
+        else: # Save the dataframe and, if passed, its metadata
+            os.makedirs(path, exist_ok=True) # Ensure that the host folder exists
+                
+            # Save the DataFrame
+            logging.info(msg = f"Saving DataDrame as {filename}.csv at {path} ..." )
+            df.to_csv(path_or_buf=os.path.join(path,filename+".csv"))
+            
+            if metadata is not None:            
+                # Save metadata. 
+                # It overides if a matedata file already exists for the DataFrame to avoid matching confusion with residual files from previous runs
+                metadata_filename = f"{filename}_metadata.json"        
+                logging.info(msg = f"Saving metadata for as {metadata_filename}.json at {path} ..." )
+                with open(os.path.join(path,metadata_filename), "w") as f:
+                    json.dump(metadata, f, indent=4)
+            else: 
+                raise logging.info('No metadata passed, so none was saved.')
+                
     else:
-        # File does not exist yet, save as given filename
-        versioned_filename = f"{filename}.csv"
-        if metadata:
-            metadata_filename = f"{os.path.splitext(filename)[0]}.json"
-            with open(metadata_filename, "w") as f:
-                json.dump(metadata, f, indent=4)
-    df.to_csv(versioned_filename, sep=sep, header=header, index=index, encoding=encoding)
+        raise ValueError('No path or filename passed.')
 
 def oredered_features(selected_features,coefs, how):
     '''
