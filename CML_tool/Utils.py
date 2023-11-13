@@ -71,7 +71,7 @@ def save_df_w_metadata(df:pd.DataFrame, path:str=None, filename:str=None, metada
         -param index: whether to include the row index in the CSV file
         -param encoding: the character encoding to use when saving the CSV file
     """
-    filename = os.path.splitext(filename)[0]
+    filename = os
     
     if (path is not None) and (filename is not None):
     
@@ -97,6 +97,23 @@ def save_df_w_metadata(df:pd.DataFrame, path:str=None, filename:str=None, metada
                 
     else:
         raise ValueError('No path and/or filename passed.')
+    
+def save_metadata(metadata:dict=None, path:str=None):
+    filename = os.path.split(__file__)[-1].split('.')[0]
+    
+    if (path is not None) and (metadata is not None):
+
+        if os.path.exists(os.path.join(path,filename+"_metadata.json")): # Check if metadata exists
+            raise FileExistsError(f"{filename}_metadata.json already exists, erase it before procceding if you want to overide it.")
+            
+        else: # Save the metadata and, if passed, its metadata
+            os.makedirs(path, exist_ok=True) # Ensure that the host folder exists
+            logging.info(msg = f"Saving metadata as {filename}.json at {path} ..." )
+            with open(os.path.join(path,filename), "w") as f:
+                json.dump(metadata, f, indent=4)
+                
+    else:
+        raise ValueError('No path or metdata object passed.')
 
 def oredered_features(selected_features,coefs, how):
     '''
