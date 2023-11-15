@@ -1,5 +1,7 @@
 # %%
 import os
+import logging
+
 import json
 import itertools
 from CML_tool.Utils import flatten_list
@@ -65,30 +67,22 @@ def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_
     return exp_dir
 
 
-def save_metadata(metadata, exp_dir):
-    '''
-    Save metadata to a file in the experiment directory.
+def save_metadata(metadata:dict=None, path:str=None):
+    filename = os.path.split(__file__)[-1].split('.')[0]
+    
+    if (path is not None) and (metadata is not None):
 
-    It first checks whether there exist a previous run metadata.json.
-    In such case it saves metadata_i.json, where i is the latest version of the metadata.
-    This strategy allows to preserve a history of succesful runs where cacheing may have been
-    used to bypass existing large computations.
-    '''
-    if os.path.exists(os.path.join(exp_dir,"metadata.json")):
-        meta_exists = True
-        cont = 0
-        while meta_exists:
-            cont +=1
-            if not os.path.exists(os.path.join(exp_dir,f"metadata_{cont}.json")):
-                meta_exists=False
-                metadata_file = os.path.join(exp_dir, f"metadata_{cont}.json")
-                with open(metadata_file, "w") as f:
-                    json.dump(metadata, f)
-    else:    
-        metadata_file = os.path.join(exp_dir, "metadata.json")
-        with open(metadata_file, "w") as f:
-            json.dump(metadata, f)
-    return
+        if os.path.exists(os.path.join(path,filename+"_metadata.json")): # Check if metadata exists
+            raise FileExistsError(f"{filename}_metadata.json already exists, erase it before procceding if you want to overide it.")
+            
+        else: # Save the metadata and, if passed, its metadata
+            os.makedirs(path, exist_ok=True) # Ensure that the host folder exists
+            logging.info(msg = f"Saving metadata as {filename}.json at {path} ..." )
+            with open(os.path.join(path,filename), "w") as f:
+                json.dump(metadata, f, indent=4)
+                
+    else:
+        raise ValueError('No path or metdata object passed.')
 
 def get_exps_dicts(battery_exps_dict):
     '''
