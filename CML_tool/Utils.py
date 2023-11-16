@@ -71,7 +71,7 @@ def save_df_w_metadata(df:pd.DataFrame, path:str=None, filename:str=None, metada
         -param index: whether to include the row index in the CSV file
         -param encoding: the character encoding to use when saving the CSV file
     """
-    filename = os
+    filename = os.path.splitext(filename)[0]
     
     if (path is not None) and (filename is not None):
     
@@ -93,7 +93,7 @@ def save_df_w_metadata(df:pd.DataFrame, path:str=None, filename:str=None, metada
                 with open(os.path.join(path,metadata_filename), "w") as f:
                     json.dump(metadata, f, indent=4)
             else: 
-                raise logging.info('No metadata passed, so none was saved.')
+                logging.info('No metadata passed, so none was saved.')
                 
     else:
         raise ValueError('No path and/or filename passed.')
