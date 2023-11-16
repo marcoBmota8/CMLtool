@@ -2,7 +2,7 @@
 import numpy as np
 import scipy.stats 
 import scipy.special
-import xgboost as xgb
+import xgboost as xgb 
 from typing import Tuple
 
 from CML_tool.ML_Utils import contains_val_CI
@@ -178,7 +178,7 @@ def DL_logistic_CI(alpha,theta,Var):
         up_lim = scipy.special.expit(up_exp)
         low_lim = scipy.special.expit(low_exp)
 
-    return  np.ravel(low_lim), np.ravel(up_lim)
+    return  (low_lim, up_lim)
 
 def Wald_type_DL_CI (alpha,theta, Var):
     """
@@ -187,7 +187,7 @@ def Wald_type_DL_CI (alpha,theta, Var):
     up_lim = theta + scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var) # Cho et al. 2018
     low_lim = theta - scipy.stats.norm.ppf(1-alpha/2)*np.sqrt(Var) # Cho et al. 2018
 
-    return np.ravel(low_lim),np.ravel(up_lim)
+    return (low_lim, up_lim)
 
 def compute_ground_truth_statistics(ground_truth, sample_weight=None):
     #assert np.array_equal(np.unique(ground_truth), [0, 1])
