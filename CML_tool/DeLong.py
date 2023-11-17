@@ -248,10 +248,8 @@ def AUC_CI(ground_truth,predictions,alpha, printing = False):
     Returns (in order):
         -Mean value of the DeLong estimation of the area under the receiving operating characteristic curve (AUROC)
         -Variance
-        -Wald confidence interval lower limit
-        -Wald confidence interval upper limit
-        -logistic confidence interval lower limit
-        -logistic confidence interval upper limit
+        -Wald confidence interval 
+        -Logistic confidence interval 
 
     """
     AUC, variance = delong_roc_variance(ground_truth,predictions)
@@ -262,7 +260,7 @@ def AUC_CI(ground_truth,predictions,alpha, printing = False):
               'Wald type:', str(int((1-alpha)*100)),'% CI:[',low_lim_wald,',',up_lim_wald,'] \n'
               'logistic type:', str(int((1-alpha)*100)),'% CI:[',low_lim_logistic,',',up_lim_logistic,'] \n')
 
-    return AUC, variance, low_lim_wald, up_lim_wald, low_lim_logistic, up_lim_logistic
+    return AUC, variance, (low_lim_wald, up_lim_wald), (low_lim_logistic, up_lim_logistic)
 
 def DeLong_AUROC(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
