@@ -4,8 +4,9 @@ import logging
 
 import json
 import itertools
+import matplotlib.pyplot as plt
 from CML_tool.Utils import flatten_list
-from CML_tool.decorators import file_based_cacheing
+from CML_tool.decorators import file_based_cacheing, file_based_figure_saving
 
 # %%
 def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_name=None):
@@ -120,6 +121,8 @@ def create_nested_dirs_and_file(root:str, folders:list, obj:object, filename:str
         obj (object): The python object to be saved.
         filename (str): The name of the file to be saved.
         extension_desired (str): The desired file extension.
+    Return:
+        current_path (str): Directory where the file was saved
     '''
     current_path = root
     for folder in folders:
@@ -129,10 +132,46 @@ def create_nested_dirs_and_file(root:str, folders:list, obj:object, filename:str
                       path=current_path,
                       filename=filename,
                       extension_desired=extension_desired)
+    return current_path
 
 @file_based_cacheing(path=None, filename=None)
-def save_file_wrapper(obj):
+def save_file_wrapper(obj:object,**kwargs):
+    '''
+    Wrapper function decorated with file_based_cacheing.
+    It saves the passed file.
+    
+    Args:
+        obj (object): The object to be saved.
+    
+    NOTE: Required kwargs:
+        filename (str): The name of the file.
+        path (str): The path where the file will be saved.
+        extension_desired (str): The desired file extension.
+
+    Returns:
+        The saved object.
+    '''
     return obj
- 
+
+@file_based_figure_saving(filename=None, path=None)
+def save_figure_wrapper(fig:plt.figure, ax:plt.axis=None, **kwargs):
+    '''
+    Wrapper function decorated with file_based_figure_saving.
+    It saves the given figure to a file.
+
+    Args:
+        fig (plt.figure): The figure to be saved.
+        ax (plt.axis): The axis object associated with the figure.
+    
+    NOTE:Required kwargs:
+        filename (str): The name of the file to save the figure as.
+        path (str): The path where the figure should be saved.
+        format (str): The format in which the figure should be saved.
+
+    Returns:
+        fig (plt.figure): The saved figure.
+        ax (plt.axis): The saved axis object.
+    '''
+    return fig, ax
         
 
