@@ -2,6 +2,7 @@ import os
 import logging
 
 import pandas as pd
+import numpy as np
 import json
 import matplotlib.pyplot as plt
 
@@ -49,16 +50,16 @@ def file_based_cacheing(path:str=None, filename:str=None,  extension_desired:str
                     if 'pkl' in extension_desired_fn:
                         obj_var = read_pickle(path=path_fn, filename=filename_fn+".pkl")
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
-
                     elif 'cvs' in extension_desired_fn:
                         obj_var = pd.read_csv(filepath = os.path.join(path_fn,filename_fn+".csv"))
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
-                    
                     elif 'json' in extension_desired_fn:
                         with open(os.path.join(path_fn, filename_fn+".json"),'r') as openfile:
                             obj_var = json.load(openfile)
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
-
+                    elif 'npy' in extension_desired_fn:
+                        obj_var = np.load(os.path.join(path_fn, filename_fn+".npy"))
+                        logging.info(msg = "Function "+func.__name__+" CACHED.")                        
                     else:
                         raise ValueError('File not found or file caching failed.')
 
@@ -69,16 +70,16 @@ def file_based_cacheing(path:str=None, filename:str=None,  extension_desired:str
                         if 'pkl' in extension_desired_fn:
                             os.makedirs(path_fn, exist_ok=True) # Ensure that the host folder exists
                             write_pickle(object = obj_var, path=path_fn, filename=filename_fn+'.pkl')
-
                         elif 'cvs' in extension_desired_fn:
                             os.makedirs(path_fn, exist_ok=True) # Ensure that the host folder exists
                             obj_var.to_csv(path_or_buf=os.path.join(path_fn,filename_fn+".csv"))
-
                         elif 'json' in extension_desired_fn:
                             os.makedirs(path_fn, exist_ok=True) # Ensure that the host folder exists
                             with open(os.path.join(path_fn, filename_fn+".json"), "w") as outfile:
                                 json.dump(obj_var, outfile)
-
+                        elif 'npy' in extension_desired_fn:
+                            os.makedirs(path_fn, exist_ok=True) # Ensure that the host folder exists
+                            np.save(os.path.join(path_fn, filename_fn+".npy"), obj_var)
                         else:
                             raise ValueError('No developed option is valid for input combination of python object and desired extension.')
                     except: # Default saving is in ".pkl" format
