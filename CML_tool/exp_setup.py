@@ -5,6 +5,7 @@ import logging
 import json
 import itertools
 from CML_tool.Utils import flatten_list
+from CML_tool.decorators import file_based_cacheing
 
 # %%
 def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_name=None):
@@ -105,8 +106,33 @@ def get_exps_dicts(battery_exps_dict):
         return combinations
     else:
         return [battery_exps_dict]
-    
 
+
+def create_nested_dirs_and_file(root:str, folders:list, obj:object, filename:str, extension_desired:str):
+    '''
+    This function is designed to save the resulting python object of some analysis 
+    within a specified subfolder tree that may exist or not totally or partially.
+    
+    Args:
+        root (str): The root directory where the subfolder tree starts.
+        folders (list): A list of folder names representing the subfolder tree.
+            From left to right correspond to higher to lower level.
+        obj (object): The python object to be saved.
+        filename (str): The name of the file to be saved.
+        extension_desired (str): The desired file extension.
+    '''
+    current_path = root
+    for folder in folders:
+        current_path = os.path.join(current_path, folder)
+        os.makedirs(current_path, exist_ok=True)
+    save_file_wrapper(obj=obj,
+                      path=current_path,
+                      filename=filename,
+                      extension_desired=extension_desired)
+
+@file_based_cacheing(path=None, filename=None)
+def save_file_wrapper(obj):
+    return obj
  
         
 
