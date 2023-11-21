@@ -128,7 +128,7 @@ def calc_pvalue(aucs, sigma_sq, alpha, printing = False):
     sigma_diff = np.sqrt(np.dot(np.dot(l, sigma_sq), l.T)) #std of the AUC difference
     AUC_diff = abs(np.diff(aucs))  # AUC difference absolute value
     AUC_diff_signed = np.diff(aucs) # AUC difference
-    z = AUC_diff/sigma_diff #U-statistic
+    z = AUC_diff/np.maximum(sigma_diff, 1e-10) #U-statistic
     
     #P-value
     log10_p_value = np.log10(2) + scipy.stats.norm.logsf(z, loc=0, scale=1) / np.log(10)
