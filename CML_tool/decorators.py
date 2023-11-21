@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import json
 import matplotlib.pyplot as plt
+import pickle
 
 from CML_tool.Utils import write_pickle, read_pickle
 
@@ -123,3 +124,27 @@ def file_based_figure_saving(filename:str=None, path:str=None, format:str='png',
         return wrapper
     return decorator
 
+def file_based_fig_ax_objects(filename:str=None, path:str=None):
+    def decorator(plot_func):
+        def wrapper(*args, **kwargs):
+            # Get path and filename from the decorated function's arguments
+            func_path = kwargs.get('path', path)
+            func_filename = os.path.splitext(kwargs.get('filename', filename))[0]
+            # Try to retrieve the plot objects if the exists in the path
+            try:
+                # Load the figure and axes
+                with open(os.path.join(func_path, func_filename+'.pkl'), 'rb') as f:
+                    fig, ax = pickle.load(f)
+                logging.info(f"Figure and axis FOUND and CACHED.")
+                return fig, ax
+            
+            # If retrieving plot objects fail (do not exist or other reason),
+            # call the original function to create the figure
+            except:
+                fig, ax = plot_func(*args, **kwargs)
+                with open(os.path.join(func_path, func_filename+'.pkl'), 'wb') as f:
+                    pickle.dump((fig, ax), f)
+                logging.info(f"Figure and axis object SAVED as {func_path}/{func_filename}.pkl")
+                return fig, ax
+        return wrapper
+    return decorator
