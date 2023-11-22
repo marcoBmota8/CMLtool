@@ -42,10 +42,10 @@ def calculate_shap_values(
             so that each feature contribution to the probability outcome can be expressed in log-odds) 
             (Default: 'identity') -> str
         -exact_masking: Only relevant to 'exact' explainer: 'independent' or 'correlation'. Whether to 
-            consider features independent (computes SHAP values as the unconditional expectation via 
-            Shapley sampling values method enumeratign all coealitions. This is t is the correct way to 
+            consider features 'independent' (computes SHAP values as the unconditional expectation via 
+            Shapley sampling values method enumerating all coalitions. This is the correct way to 
             compute the marginal contribution of a feature to a model prediction from a causal perspective 
-            (Janzing et al. 2020)) or enforce a hierarchical structure among predictors based on correlation 
+            (Janzing et al. 2020)) or enforce a hierarchical structure among predictors based on 'correlation' 
             (computes Owen values) when masking. (Default: 'independent') -> str
         -feature_perturbation: Only relevant for 'linear' explainer.
             'interventional' or 'observational'. (Default: 'interventional') -> str
