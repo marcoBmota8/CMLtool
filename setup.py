@@ -44,6 +44,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/marcoBmota8/CML_tool',
-    version='0.01',
+    version='1.0.0',
     zip_safe=False,
 )
