@@ -134,6 +134,16 @@ def flatten_list(nested_list):
             flattened.append(item)
     return flattened
 
+def round_to_resolution(x, resolution):
+    """
+    Round an array to the desired resolution.
+    for example:
+    >>> x = np.array([0.22, 0.39, 1.02, 3.28])
+    >>> round_to_resolution(x, 0.25)
+    >>> np.array([0.25, 0.5, 1.00, 3.5])
+    """
+    return np.round(x/resolution) * resolution
+
 def look_up_description(df,description):
     '''
     Use this to find what 
