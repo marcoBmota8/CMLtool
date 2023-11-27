@@ -147,17 +147,17 @@ def round_to_resolution(x, resolution, direction):
     >>> np.array([0.25, -0.50, 1.25, -3.50])
     """
     sign = np.sign(x)
-    if 'ceil':
+    if direction =='ceil':
         return np.ceil(x/resolution) * resolution
-    elif 'floor':
+    elif direction =='floor':
         return np.floor(x/resolution) * resolution
-    elif 'absolute-ceil':
+    elif direction =='absolute-ceil':
         return sign*np.ceil(abs(x)/resolution) * resolution
-    elif 'absolute-floor':
+    elif direction =='absolute-floor':
         return  sign*np.floor(abs(x)/resolution) * resolution
-    elif 'round':
+    elif direction =='round':
         return np.round(x/resolution) * resolution
-    elif 'absolute-round':
+    elif direction =='absolute-round':
         return np.round(abs(x)/resolution) * resolution        
     else:
         raise ValueError('Rounding direction is misspecified. Choose among "ceil", "absolute-ceil", "floor", "absolute-floor" and "round".')
