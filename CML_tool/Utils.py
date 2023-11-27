@@ -142,9 +142,9 @@ def round_to_resolution(x, resolution, direction):
     >>> round_to_resolution(x, 0.25, 'round')
     >>> np.array([0.25, -0.50, 1.00, -3.50])
     >>> round_to_resolution(x, 0.25, 'floor')
-    >>> np.array([0.00, -0.25, 1.00, -3.25])
+    >>> np.array([0.00, -0.50, 1.00, -3.50])
     >>> round_to_resolution(x, 0.25, 'absolute-ceil')
-    >>> np.array([0.25, -0.50, 1.25, -3.50])
+    >>> np.array([0.25, -0.5, 1.25, -3.50])
     """
     sign = np.sign(x)
     if direction =='ceil':
