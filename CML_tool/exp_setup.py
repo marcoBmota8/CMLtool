@@ -13,7 +13,7 @@ def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_
     '''
     Create the folder tree to store results for a given experiment root directory and metadata.
     First, this function attempts to create a '.../Results' (or '.../Results/result_name' if any string is passed under 'result_name')
-    folder in the main path of the script where it is ran if surch directory does not already exist.
+    folder in the main path of the script where it is ran if such directory does not already exist.
     Second, if indicated through 'create_model_subfolder' it attempts to create a subfolder under Results for the model architecture 
     employed if this subfolder does not exits.
     Third, it takes the path to the input data and uses the dataset_name in the metadata to create a subsubfolder /Results/model_name/dataset_name 
