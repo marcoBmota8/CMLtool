@@ -134,16 +134,32 @@ def flatten_list(nested_list):
             flattened.append(item)
     return flattened
 
-def round_to_resolution(x, resolution):
+def round_to_resolution(x, resolution, direction):
     """
     Round an array to the desired resolution.
     for example:
-    >>> x = np.array([0.22, 0.39, 1.02, 3.28])
-    >>> round_to_resolution(x, 0.25)
-    >>> np.array([0.25, 0.5, 1.00, 3.5])
+    >>> x = np.array([0.22, -0.39, 1.02, -3.28])
+    >>> round_to_resolution(x, 0.25, 'round')
+    >>> np.array([0.25, -0.50, 1.00, -3.50])
+    >>> round_to_resolution(x, 0.25, 'floor')
+    >>> np.array([0.00, -0.25, 1.00, -3.25])
+    >>> round_to_resolution(x, 0.25, 'absolute-ceil')
+    >>> np.array([0.25, -0.50, 1.25, -3.50])
     """
-    return np.round(x/resolution) * resolution
-
+    sign = np.sign(x)
+    if 'ceil':
+        return np.ceil(x/resolution) * resolution
+    elif 'floor':
+        return np.floor(x/resolution) * resolution
+    elif 'absolute-ceil':
+        return sign*np.ceil(abs(x)/resolution) * resolution
+    elif 'absolute-floor':
+        return  sign*np.floor(abs(x)/resolution) * resolution
+    elif 'round':
+        return np.round(x/resolution) * resolution
+    else:
+        raise ValueError('Rounding direction is misspecified. Choose among "ceil", "absolute-ceil", "floor", "absolute-floor" and "round".')
+    
 def look_up_description(df,description):
     '''
     Use this to find what 
