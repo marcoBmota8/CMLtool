@@ -157,6 +157,8 @@ def round_to_resolution(x, resolution, direction):
         return  sign*np.floor(abs(x)/resolution) * resolution
     elif 'round':
         return np.round(x/resolution) * resolution
+    elif 'absolute-round':
+        return np.round(abs(x)/resolution) * resolution        
     else:
         raise ValueError('Rounding direction is misspecified. Choose among "ceil", "absolute-ceil", "floor", "absolute-floor" and "round".')
     
