@@ -18,12 +18,10 @@ def file_based_cacheing(path:str=None, filename:str=None,  extension_desired:str
         1. It attempts to read the file and return the object.
         2. If fails:
             1. It runs the function it decorates.
-            2. Saves the result to the path+file_name
+            2. Saves the result to the path+file_name. 
+                In the process creates the nested folder tree needed 
+                if it doesnt exists already.
             3. Returns the result object.
-    
-    Current implementation allows to save and return:
-      -python objects as pickle files.
-      -pandas dataframes as .csv files.
     
     If the user-specified saving fails, the decorator default behavior is
     to override the user-specified file_name by removing the specified extension 
@@ -101,7 +99,7 @@ def file_based_figure_saving(filename:str=None, path:str=None, format:str='png',
         def wrapper(*args, **kwargs):
             
             # Call the original function to create the figure
-            fig, ax = plot_func(*args, **kwargs)
+            fig = plot_func(*args, **kwargs)
             
             # Get path and filename from the decorated function's arguments
             func_path = kwargs.get('path', path)
