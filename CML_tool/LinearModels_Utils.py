@@ -220,10 +220,10 @@ class BootstrapLinearModel:
         Generate the bootstrapping coefficients and data indices.
         '''
         self.n_bootstrap = n_bootstrap
-        self.X = X
-        self.y = y
-        self.n, self.p = X.shape
-        self.X_HOS = X_HOS
+        self.X = X.values if isinstance(X, pd.DataFrame) else X
+        self.y = y.values if isinstance(y, pd.Series) else y
+        self.n, self.p = self.X.shape
+        self.X_HOS = X_HOS.values if isinstance(X_HOS, pd.DataFrame) else X
         
         #initialize the coefficient, intercepts and indices matrices
         self.coefs = np.array([]).reshape(0,self.p)
@@ -297,7 +297,7 @@ class BootstrapLinearModel:
         # Bootstrap coefficient point estimate
         estimate = np.mean(betas_star, axis=0)
 
-        if nonzero_flag:
+        if nonzero_flag: #Preferred
             df = pd.DataFrame((estimate, confidence_intervals_E,\
                 confidence_intervals_P,\
                 np.array([not contains_val_CI(CI = (lower_bound_E[i], upper_bound_E[i]), val = 0) for i in range(np.shape(betas_hat)[0])]), \
@@ -357,8 +357,12 @@ class BootstrapLinearModel:
                 * 'shap_mean' (np.array): point estimate (mean) SHAP values for each feature.
                 * 'quantile_ci' (pandas.DataFrame): Bootstrap quantiles CI (empirical CIs), each element is a tuple (CI_lower,CI_upper).
                 * 'pivot_ci' (pandas.DataFrame): Bootstrap pivot-based CI (PREFERRED), each element is a tuple (CI_lower,CI_upper).
-            - feature_importance ():
-                *
+            - feature_importance (pandas.DataFrame): feature importance is measure based on |SHAP|. 
+                Rows:
+                * fimp: Mean |SHAP|
+                * 'quantile_ci': Bootstrap quantiles CI (empirical CIs), each element is a tuple (CI_lower,CI_upper).
+                * 'pivot_ci': Bootstrap pivot-based CI (PREFERRED), each element is a tuple (CI_lower,CI_upper).
+                 
         '''
         
         # Intercept
@@ -435,7 +439,7 @@ class BootstrapLinearModel:
         fimp_upper_bound_P = np.maximum(2*fimp_hat-fimp_lower_bound_E,0) # idem
         fimp_ci_P = [(fimp_lower_bound_P[i], fimp_upper_bound_P[i]) for i in range(self.p)]
 
-        # Bootstrap feature importance poitn estimate
+        # Bootstrap feature importance point estimate
         fimp_estimate = np.mean(fimp, axis=0)
         
         # Feature importance stats
