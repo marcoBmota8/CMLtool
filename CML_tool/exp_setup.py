@@ -154,7 +154,7 @@ def save_file_wrapper(obj:object,**kwargs):
     return obj
 
 @file_based_figure_saving(filename=None, path=None)
-def save_figure_wrapper(fig:plt.figure **kwargs):
+def save_figure_wrapper(fig:plt.figure, **kwargs):
     '''
     Wrapper function decorated with file_based_figure_saving.
     It saves the given figure to a file.
