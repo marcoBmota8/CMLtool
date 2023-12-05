@@ -214,8 +214,7 @@ class BootstrapLinearModel:
             -y (numpy.array): training labels
             -X_HOS (numpy.array): Hold out data
             -n_bootstrap (float or int): Number of bootsrapped samples to run
-
-            
+  
         ------------ Notes -------------
         
         Generate the bootstrapping coefficients and data indices.
@@ -255,7 +254,7 @@ class BootstrapLinearModel:
         Compute confidence intervals and point estimate based on 
         bootstrapping distribution alpha and 1-alpha quantiles. 
         Can provide a flag for nonzero coefficients based on 
-        its confidence interval including 0 or not.
+        its confidence interval not including 0.
                
         Args:
             -alpha (float): test significance level. (Default:0.05)
@@ -353,6 +352,7 @@ class BootstrapLinearModel:
             -n_jobs (int): number of threats/workers to use for parallel computation.
             
         Returns:
+            - shap_values_samples (numpy.array): Bootstrapped Shapley values samples.
             - shap_dict (dict):
                 * 'shap_mean' (np.array): point estimate (mean) SHAP values for each feature.
                 * 'quantile_ci' (pandas.DataFrame): Bootstrap quantiles CI (empirical CIs), each element is a tuple (CI_lower,CI_upper).
@@ -442,7 +442,7 @@ class BootstrapLinearModel:
         feature_importance = (pd.DataFrame(
             (fimp_estimate, fimp_ci_E, fimp_ci_P)).T).set_axis(['fimp_mean','quantile_ci','pivot_ci'], axis = 1)
         
-        return shap_dict, feature_importance
+        return shap_values_samples, shap_dict, feature_importance
         
     
     
