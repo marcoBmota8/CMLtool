@@ -231,7 +231,7 @@ class BootstrapLinearModel:
         self.train_idx = []
 
         # Define a helper function for parallelization
-        def fit_bootstrap(i):
+        def fit_bootstrap():
             # Generate a random bootstrap sample with replacement
             bootstrap_sample = np.random.choice(self.n, size=self.n, replace=True)
             X_bootstrap, y_bootstrap = self.X[bootstrap_sample,:],self.y[bootstrap_sample]
@@ -244,7 +244,7 @@ class BootstrapLinearModel:
             return model_boot.coef_.ravel(), model_boot.intercept_ if hasattr(model_boot, "intercept_") else None, bootstrap_sample
 
         # Perform bootstrapping in parallel
-        results = Parallel(n_jobs=n_jobs)(delayed(fit_bootstrap)() for _ in range(self.n_bootstrap))
+        results = Parallel(n_jobs=n_jobs)(delayed(fit_bootstrap)() for _ in tqdm(range(self.n_bootstrap)))
 
         # Collect the results
         for coef, intercept, bootstrap_sample in results:
@@ -270,7 +270,7 @@ class BootstrapLinearModel:
 
         Returns:
             -Dataframe with columns:
-                *'theta_mean': coefficient potin estimate (mean)
+                *'theta_mean': coefficient point estimate (mean)
                 *'quantile_ci': Bootstrap quantiles CI (empirical CIs), array of tuples of the form (beta mean,CI_lower,CI_upper)
                 *'pivot_ci': Bootstrap pivot-based CI (PREFERRED),array of tuples of the form (beta mean,CI_lower,CI_upper)
                 * 'nonzero_quant' and 'nonzero_pivot' (optional): arrays of boolean flags marking which coefficients are statistically nonzero. 
@@ -306,7 +306,8 @@ class BootstrapLinearModel:
         estimate = np.mean(betas_star, axis=0)
 
         if nonzero_flag: #Preferred
-            df = pd.DataFrame((estimate, confidence_intervals_E,\
+            df = pd.DataFrame((estimate, \
+                confidence_intervals_E,\
                 confidence_intervals_P,\
                 np.array([not contains_val_CI(CI = (lower_bound_E[i], upper_bound_E[i]), val = 0) for i in range(np.shape(betas_hat)[0])]), \
                 np.array([not contains_val_CI(CI = (lower_bound_P[i], upper_bound_P[i]), val = 0) for i in range(np.shape(betas_hat)[0])]))).T
