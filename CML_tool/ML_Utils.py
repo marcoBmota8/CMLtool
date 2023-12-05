@@ -70,6 +70,8 @@ def contains_val_CI(CI, val):
         return True 
     elif (CI[0] == val) and (CI[1] == val):
         return True
+    elif ((CI[0] == val) and (CI[1] != val)) or ((CI[1] == val) and (CI[0] != val)):
+        return True
     else:
         return False
 
