@@ -207,7 +207,7 @@ class BootstrapLinearModel:
     def get_test_data(X,train_idx):
         return X[np.setdiff1d(range(X.shape[0]), train_idx),:]        
 
-    def fit(self, X:np.array,y:np.array,X_HOS:np.array,n_bootstrap:int=1000):
+    def fit(self, X:np.array,y:np.array,X_HOS:np.array,n_bootstrap:int=1000, n_jobs:int=1):
         '''
         Args:
             -X (numpy.arrray): training data 
@@ -224,14 +224,14 @@ class BootstrapLinearModel:
         self.y = y.values if isinstance(y, pd.Series) else y
         self.n, self.p = self.X.shape
         self.X_HOS = X_HOS.values if isinstance(X_HOS, pd.DataFrame) else X
-        
+
         #initialize the coefficient, intercepts and indices matrices
         self.coefs = np.array([]).reshape(0,self.p)
         self.intercepts = np.array([]).reshape(0,1)
         self.train_idx = []
-        
-        # Perform bootstrapping
-        for _ in range(self.n_bootstrap):
+
+        # Define a helper function for parallelization
+        def fit_bootstrap(i):
             # Generate a random bootstrap sample with replacement
             bootstrap_sample = np.random.choice(self.n, size=self.n, replace=True)
             X_bootstrap, y_bootstrap = self.X[bootstrap_sample,:],self.y[bootstrap_sample]
@@ -240,10 +240,18 @@ class BootstrapLinearModel:
             model_boot = clone(self.model)
             model_boot.fit(X_bootstrap,y_bootstrap)
 
+            # Return the results
+            return model_boot.coef_.ravel(), model_boot.intercept_ if hasattr(model_boot, "intercept_") else None, bootstrap_sample
+
+        # Perform bootstrapping in parallel
+        results = Parallel(n_jobs=n_jobs)(delayed(fit_bootstrap)() for _ in range(self.n_bootstrap))
+
+        # Collect the results
+        for coef, intercept, bootstrap_sample in results:
             # Stack to the coefficient and intercepts matrix
-            self.coefs = np.vstack((self.coefs, model_boot.coef_.ravel()))
-            if hasattr(self._model, "intercept_"):
-                self.intercepts = np.vstack((self.intercepts, model_boot.intercept_))
+            self.coefs = np.vstack((self.coefs, coef))
+            if intercept is not None:
+                self.intercepts = np.vstack((self.intercepts, intercept))
 
             # Append the boostrap sample instance (rows) indices 
             self.train_idx.append(bootstrap_sample)
