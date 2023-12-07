@@ -176,7 +176,7 @@ class BootstrapLinearModel:
     def __init__(self,model):
         '''
         Args:
-            -model (sklearn object): model instance 
+            -model (sklearn object): fitted model instance 
         '''
         # Set the coefficients estimates from the full training data (coef_hat)
         if not (hasattr(model, "coef_")):
@@ -317,7 +317,7 @@ class BootstrapLinearModel:
             return df.set_axis(['theta_mean','quantile_ci','pivot_ci'], axis = 1)
             
         
-    def shap_CI(self, explainer_type:str='linear', link_function:str='logit',
+    def shap_CI(self, explainer_type:str='linear', link_function:str='identity',
                      feature_perturbation:str='interventional', exact_masking:str='independent',
                      alpha:float=0.05, n_jobs:int=1):
         '''
@@ -328,8 +328,8 @@ class BootstrapLinearModel:
             -explainer_type (str): 'linear' or 'exact'. Linear SHAP (model-specific) is preferred to Exact 
             (model-agnostic). (Default: 'linear') #TODO implement kernelSHAP.
             -link_function (str): 'identity' (no-op link function) or 'logit' (useful with classification models
-                so that each feature contribution to the probability outcome can be expressed in log-odds) 
-                (Default: 'identity')
+                so that each feature contribution to the probability outcome can be expressed in log-odds instead of 
+                probability units.) (Default: 'identity')
             -feature_perturbation (str): Only relevant for 'linear' explainer.
             'interventional' or 'observational'. (Default: 'interventional').
 
@@ -349,7 +349,7 @@ class BootstrapLinearModel:
                 if we intervened and changed some of the inputs. Shapley values are calculated so that 
                 credit for a prediction is only given to the features the model actually uses. The benefit of
                 this approach is that it will never give credit to features that are not used by the model but that
-                are correlated with (at least one) that are. This option uses the Independent masker.
+                are correlated with (at least one) feature that is. This option uses the Independent masker.
                 
             -exact_masking (str): Only relevant to 'exact' explainer: 'independent' or 'correlation'. Whether to 
                 consider features independent (computes SHAP values as the unconditional expectation via 
