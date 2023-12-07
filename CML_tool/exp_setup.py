@@ -135,7 +135,7 @@ def create_nested_dirs_and_file(root:str, folders:list, obj:object, filename:str
     return current_path
 
 @file_based_cacheing(path=None, filename=None)
-def save_file_wrapper(obj:object,**kwargs):
+def save_file_wrapper(*args,**kwargs):
     '''
     Wrapper function decorated with file_based_cacheing.
     It saves the passed file.
@@ -151,7 +151,7 @@ def save_file_wrapper(obj:object,**kwargs):
     Returns:
         The saved object.
     '''
-    return obj
+    return args
 
 @file_based_figure_saving(filename=None, path=None)
 def save_figure_wrapper(fig:plt.figure, **kwargs):
