@@ -4,7 +4,6 @@ import logging
 import pandas as pd
 import numpy as np
 import json
-import matplotlib.pyplot as plt
 import pickle
 
 from CML_tool.Utils import write_pickle, read_pickle
@@ -15,6 +14,11 @@ logging.basicConfig(level=logging.INFO)
 def file_based_cacheing(path:str=None, filename:str=None,  extension_desired:str='.pkl'):
     """
     File based cacheing. 
+    
+    If path, filename and/or extension argument are passed to the function instance
+    the decorator decorates those are used instead of the values in the decorator. If no path and/or 
+    filename is specified in either instance, an error is thrown.
+    
         1. It attempts to read the file and return the object.
         2. If fails:
             1. It runs the function it decorates.
@@ -28,8 +32,8 @@ def file_based_cacheing(path:str=None, filename:str=None,  extension_desired:str
     if any, and .append pkl at the end.
     It then saves the data/python object.
 
-    If reading fails, we assume the specified file doe snot exists and
-    the function will be run.
+    If reading fails, we assume the specified file does not exist and
+    the function will be run and the result saved.
 
     """
     def decorator(func):
