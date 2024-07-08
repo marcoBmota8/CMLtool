@@ -36,9 +36,9 @@ def calculate_shap_values(
         -training_outcome: labels or target values for the training instances. -> numpy.array
         -test_data: Data for which predictions shapley values are calculated. -> numpy.array
         -pretrained: Boolean indicating whether the passed model object is already trained on the
-            background data or not (Default: False) -> bool
-        -explainer_type: 'linear', 'exact'. Linear SHAP (linear models) and TreeExplainer (Lundberg et al. 2020) (tree-based models) 
-            are model-specific). Exact is model-agnostic. -> str 
+            background data or not. If False, model is fitted to the background data passed (Default: False) -> bool
+        -explainer_type: 'linear', 'exact' or 'tree'. Linear SHAP (linear models) and TreeExplainer (Lundberg et al. 2020) (tree-based models) 
+            are model-specific. Exact is model-agnostic. -> str 
             #TODO implement the fast model agnostic kernelSHAP (Linear LIME + Shapley values) 
         -link_function: The link function used to map between the output units of the model to the SHAP value units.
             'identity' (no-op link function, for binary classification this keeps Shapley values as probability) or 
@@ -71,14 +71,9 @@ def calculate_shap_values(
               are correlated with (at least one) that are. This option uses the Independent masker.
 
         -n_samples: Only useful for feature_perturbation = 'observational'. Number of samples to use when estimating
-        the transformation matrix used to account for feature correlations. LinearExplainer uses sampling to estimate 
-        a transform that can then be applied to explain any prediction of the model. (Default:1000) -> int
-        -max_samples: The maximum number of samples to use from the passed background data in the independent masker.
-        If data has more than max_samples then shap.utils.sample is used to subsample the dataset. 
-        The number of samples coming out of the masker (to be integrated over) matches the number of
-        samples in the background dataset. 
-        This means larger background dataset cause longer runtimes. 
-        Normally about 1000 background samples are reasonable choices. (Default:1000) -> int
+        the transformation matrix used to account for feature correlations. (Default:1000) -> int
+        -max_samples: The maximum number of samples to use from the passed background data in the independent masker. 
+        (Default:1000) -> int
         
     Returns:
         -Shapley values as a numpy array of the same shape as test_data.
@@ -97,7 +92,6 @@ def calculate_shap_values(
     
     # Train or use pretrained model
     if not pretrained:
-        print(model.random_state)
         model.fit(background_data,training_outcome)
     elif pretrained:
         pass
@@ -222,7 +216,7 @@ def calculate_shap_values(
             model_output=model_output,
         )
         
-        warnings.warn(f"Provided Shapley values are in {explainer.model.tree_output} units.")
+        warnings.warn(f"WARNING: Provided Shapley values are in {explainer.model.tree_output} units.")
         
         # Compute Shapley values
         shap_values = explainer.shap_values(test_data)[0]   
@@ -246,47 +240,38 @@ def CI_shap(
         explainer_type = None,
         link_function = 'identity',
         feature_perturbation = 'interventional',
-        exact_masking = 'independent',
         n_samples = 1000,
         max_samples = 1000
         ):
     '''
-    Compute empirical variability and confidence intervals of Shapley values via Monte Carlo sampling. 
-    This function makes use of calculate_shap_values to compute each Shapley value sample.
+    Compute empirical variability and confidence intervals of Shapley values. 
+    This function makes use of calculate_shap_values to compute each Shapley value sample and then 
+    calculates the bootstrapped confidence intervals.
 
     -Args:
         -model: model instance -> sklearn object
-        -background_data: training data used to compute its mean and covariance which
-            in turn are used to compute conditional expectations (either observational or 
-            interventional). If pretrained=False, the model is trained to these data (i.e. "X"). -> numpy.array
-        -training_outcome: labels or target values for the training instances. 
-            If pretrained=False, the model is trained to these labels (i.e. "y") -> numpy.array
+         -background_data: training data used to compute its mean and covariance which
+        in turn are used to compute conditional expectations (either observational or 
+            interventional). -> numpy.array 
+        -training_outcome: labels or target values for the training instances. -> numpy.array
         -test_data: Data for which predictions shapley values are calculated. -> numpy.array
-        - random_distortion: Boolean indicating whether to computed CIs based on boostrapped samples of the training data ("bootstrapping")
+        - randomness_distortion: Whether to compute CIs based on boostrapped samples of the training data ("bootstrapping")
             or different randon seeds of the model during training on the full datatset ("seeds"). -> str
         -n_jobs: number of threads to use durign parallel computation of the MonteCarlo samples. (Default: 1) -> int
-        -MC_repeats: MonteCarlo simulation drawings to estimate the Shapley values distribution.
+        -MC_repeats: MonteCarlo simulations to estimate the Shapley values distribution.
             (Default:1000) -> int
         -alpha: confidence level. (Default: 0.05) -> float
-        -explainer_type: 'linear', 'exact'. Linear can only be used with linear models such as 
-            logistic regression. Exact is model agnostic. (Default: 'exact') -> str
-        -link_function: 'identity' (no-op link function) or 'logit' (useful with classification models
-            so that each feature contribution to the probability outcome can be expressed in log-odds) 
+        -explainer_type: 'linear', 'exact' or 'tree'. Linear SHAP (linear models) and TreeExplainer (Lundberg et al. 2020) (tree-based models) 
+            are model-specific. Exact is model-agnostic.) -> str 
+        -link_function: The link function used to map between the output units of the model to the SHAP value units.
+            'identity' (no-op link function, for binary classification this keeps Shapley values as probability) or 
+            'logit' (with binary classification models this option expresses each feature Shapley value as log-odds) 
             (Default: 'identity') -> str
-        -feature_perturbation: Only relevant for 'linear' explainer. 'interventional' or 'observational'.
+        -feature_perturbation: 'interventional' or 'observational'. For explanation see calculate_shap_values docstring.
             (Default: 'interventional') -> str
-        -exact_masking: Only relevant to 'exact' explainer: 'independent' or 'correlation'. Whether to 
-            consider features independently (computes Shapley values) or enforce a hierarchical structure among
-            predictors based on correlation (computes Owen values). (Default: 'independent') -> str
         -n_samples: Only useful for feature_perturbation = 'observational'. Number of samples to use when estimating the transformation matrix used 
-            to account for feature correlations. LinearExplainer uses sampling to estimate a transform 
-            that can then be applied to explain any prediction of the model. (Default:1000) -> int
-        -max_samples: The maximum number of samples to use from the passed background data in the independent masker.
-            If data has more than max_samples then shap.utils.sample is used to subsample the dataset. 
-            The number of samples coming out of the masker (to be integrated over) matches the number of
-            samples in the background dataset. 
-            This means larger background dataset cause longer runtimes. 
-            Normally about 1, 10, 100, or 1000 background samples are reasonable choices. (Default:1000) -> int
+            to account for feature correlations. (Default:1000) -> int
+        -max_samples: The maximum number of samples to use from the passed background data in the independent masker. (Default:1000) -> int
         
     -Returns:
         - point estimate (np.array): mean SHAP values for each feature.
@@ -294,9 +279,6 @@ def CI_shap(
         - upper bounds (np.array): confidence interval upper bounds for each feature.
 
     '''
-
-    if randomness_distortion not in ['bootstrapping', 'seeds']:
-        raise ValueError('Invalid option. Choose between "bootstrapping" or "seeds".')
     
     if randomness_distortion == 'bootstrapping':
         # Estimate confidence intervals through Monte Carlo sampling via bootstrapped samples of the training dataset
@@ -309,7 +291,6 @@ def CI_shap(
             explainer_type=explainer_type,
             link_function=link_function,
             feature_perturbation=feature_perturbation,
-            exact_masking=exact_masking,
             n_samples=n_samples,
             max_samples=max_samples
             ) for idx in tqdm([
@@ -326,11 +307,12 @@ def CI_shap(
             explainer_type=explainer_type,
             link_function=link_function,
             feature_perturbation=feature_perturbation,
-            exact_masking=exact_masking,
             n_samples=n_samples,
             max_samples=max_samples
-            ) for seed in tqdm(np.random.choice(range(MC_repeats), relace=False))
+            ) for seed in tqdm(np.random.choice(range(MC_repeats), size=MC_repeats, replace=False))
             )
+    else:
+        raise ValueError(f"`{randomness_distortion}` is not a supported option as `randomness_distortion` input.")
         
         
     # Calculate the mean of the Shapley values as the point estimate
