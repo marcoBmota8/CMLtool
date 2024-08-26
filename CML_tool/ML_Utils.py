@@ -58,23 +58,24 @@ def compute_empirical_ci(X: np.array, alpha:float=0.05, type:str='pivot', bootst
         lower_percentile = 100*alpha/2
         upper_percentile = 100-lower_percentile
         
+        #Compute bootstrapped samples means
+        bootstrap_means = np.array([np.mean(X[np.random.choice(X.shape[0], X.shape[0], replace=True)],axis=0) for _ in range(bootstrap_repeats_pivot)])
+        
+        # Compute quantiles
+        lower_bound = np.percentile(bootstrap_means, lower_percentile, axis=0)
+        upper_bound = np.percentile(bootstrap_means, upper_percentile, axis=0)
+        
         if type == 'quantile':
-            # Compute quantiles
-            lower_bound = np.percentile(X, lower_percentile, axis=0)
-            upper_bound = np.percentile(X, upper_percentile, axis=0)
-        elif type == 'pivot':
-            # Compute pivot 
-            bootstrap_means = np.array([np.mean(X[np.random.choice(X.shape[0], X.shape[0], replace=True)],axis=0) for _ in range(bootstrap_repeats_pivot)])
-            bootstrap_lower_quant = np.percentile(bootstrap_means, lower_percentile, axis=0)
-            bootstrap_upper_quant = np.percentile(bootstrap_means, upper_percentile, axis=0)   
-                     
+            return [(lower_bound[i], upper_bound[i]) for i in range(np.shape(X)[1])]
+        elif type == 'pivot': 
             mean_X = np.mean(X, axis=0)
-            lower_bound = 2*mean_X-bootstrap_upper_quant
-            upper_bound = 2*mean_X-bootstrap_lower_quant
+            lower_bound_pivot = 2*mean_X-upper_bound
+            upper_bound_pivot = 2*mean_X-lower_bound
+            return [(lower_bound_pivot[i], upper_bound_pivot[i]) for i in range(np.shape(X)[1])]
         else:
             raise ValueError (f'{type} is not a valid confidence interval type.')
         
-        return [(lower_bound[i], upper_bound[i]) for i in range(np.shape(X)[1])]
+        
 
 def overlap_CI(CI1, CI2): 
     '''
