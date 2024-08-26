@@ -74,7 +74,7 @@ def compute_empirical_ci(X: np.array, alpha:float=0.05, type:str='pivot', bootst
         else:
             raise ValueError (f'{type} is not a valid confidence interval type.')
         
-        return [(lower_bound[i], upper_bound[i]) for i in range(np.shape(X)[0])]
+        return [(lower_bound[i], upper_bound[i]) for i in range(np.shape(X)[1])]
 
 def overlap_CI(CI1, CI2): 
     '''
