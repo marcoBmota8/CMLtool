@@ -35,6 +35,49 @@ def binary_classifier_metrics(threshold, y_true,probas):
 
     return accuracy, sensitivity, specificity,ppv,npv,f1_score
 
+def compute_empirical_ci(X: np.array, alpha:float=0.05, type:str='pivot', bootstrap_repeats_pivot: int=5000):
+        '''
+        Compute confidence intervals of a data matrix with (repetition/bootstrapped)
+        samples across several dimensions.
+               
+        Args:
+            -X (numpy.array): Data matrix with measurements (rows) and dimensions (columns).
+            -alpha (float): significance level. (Default:0.05)
+            -type (str): Type of empirical confidence interval to return
+                *'quantile': Empirical distribution quantiles.
+                *'pivot': Pivot-based CI (Default).
+            -bootstrap_repeats_pivot (int): How many bootstrapped samples use to estimate the pivot
+                for a pivot-based confidence interval.
+
+        Returns:
+            -ci_list (list): List of tuples of the form (CI_lower,CI_upper), one per passed dimension in X.
+                
+        ''' 
+        
+        # Calculate confidence intervals
+        lower_percentile = 100*alpha/2
+        upper_percentile = 100-lower_percentile
+        
+        # Compute quantiles
+        lower_bound = np.percentile(X, lower_percentile, axis=0)
+        upper_bound = np.percentile(X, upper_percentile, axis=0)
+        
+        if type == 'quantile':
+            pass
+        elif type == 'pivot':
+            # Compute pivot 
+            bootstrap_means = np.array([np.mean(X[np.random.choice(X.shape[0], X.shape[0], replace=True)],AXIS=0) for _ in range(bootstrap_repeats_pivot)])
+            bootstrap_lower_quant = np.percentile(bootstrap_means, lower_percentile, axis=0)
+            bootstrap_upper_quant = np.percentile(bootstrap_means, upper_percentile, axis=0)   
+                     
+            mean_X = np.mean(X, axis=0)
+            lower_bound = 2*mean_X-bootstrap_upper_quant
+            upper_bound = 2*mean_X-bootstrap_lower_quant
+        else:
+            raise ValueError (f'{type} is not a valid confidence interval type.')
+        
+        return [(lower_bound[i], upper_bound[i]) for i in range(np.shape(X)[0])]
+
 def overlap_CI(CI1, CI2): 
     '''
     Returns whether two confidence intervals overlap or not.
