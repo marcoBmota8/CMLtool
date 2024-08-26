@@ -58,15 +58,13 @@ def compute_empirical_ci(X: np.array, alpha:float=0.05, type:str='pivot', bootst
         lower_percentile = 100*alpha/2
         upper_percentile = 100-lower_percentile
         
-        # Compute quantiles
-        lower_bound = np.percentile(X, lower_percentile, axis=0)
-        upper_bound = np.percentile(X, upper_percentile, axis=0)
-        
         if type == 'quantile':
-            pass
+            # Compute quantiles
+            lower_bound = np.percentile(X, lower_percentile, axis=0)
+            upper_bound = np.percentile(X, upper_percentile, axis=0)
         elif type == 'pivot':
             # Compute pivot 
-            bootstrap_means = np.array([np.mean(X[np.random.choice(X.shape[0], X.shape[0], replace=True)],AXIS=0) for _ in range(bootstrap_repeats_pivot)])
+            bootstrap_means = np.array([np.mean(X[np.random.choice(X.shape[0], X.shape[0], replace=True)],axis=0) for _ in range(bootstrap_repeats_pivot)])
             bootstrap_lower_quant = np.percentile(bootstrap_means, lower_percentile, axis=0)
             bootstrap_upper_quant = np.percentile(bootstrap_means, upper_percentile, axis=0)   
                      
