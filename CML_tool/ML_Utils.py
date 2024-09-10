@@ -35,7 +35,7 @@ def binary_classifier_metrics(threshold, y_true,probas):
 
     return accuracy, sensitivity, specificity,ppv,npv,f1_score
 
-def compute_empirical_ci(X: np.array, alpha:float=0.05, type:str='pivot', bootstrap_repeats_pivot: int=5000):
+def compute_empirical_ci(X: np.array, alpha:float=0.05, type:str='pivot', bootstrap_repeats: int=5000):
         '''
         Compute confidence intervals of a data matrix with (repetition/bootstrapped)
         samples across several dimensions.
@@ -46,7 +46,7 @@ def compute_empirical_ci(X: np.array, alpha:float=0.05, type:str='pivot', bootst
             -type (str): Type of empirical confidence interval to return
                 *'quantile': Empirical distribution quantiles.
                 *'pivot': Pivot-based CI (Default).
-            -bootstrap_repeats_pivot (int): How many bootstrapped samples use to estimate the pivot
+            -bootstrap_repeats (int): How many bootstrapped samples use to estimate the pivot
                 for a pivot-based confidence interval.
 
         Returns:
@@ -59,11 +59,11 @@ def compute_empirical_ci(X: np.array, alpha:float=0.05, type:str='pivot', bootst
         upper_percentile = 100-lower_percentile
         
         #Compute bootstrapped samples means
-        bootstrap_means = np.array([np.mean(X[np.random.choice(X.shape[0], X.shape[0], replace=True)],axis=0) for _ in range(bootstrap_repeats_pivot)])
+        bootstrap_data = np.vstack([X[np.random.choice(X.shape[0], X.shape[0], replace=True)] for _ in range(bootstrap_repeats)])
         
         # Compute quantiles
-        lower_bound = np.percentile(bootstrap_means, lower_percentile, axis=0)
-        upper_bound = np.percentile(bootstrap_means, upper_percentile, axis=0)
+        lower_bound = np.percentile(bootstrap_data, lower_percentile, axis=0)
+        upper_bound = np.percentile(bootstrap_data, upper_percentile, axis=0)
         
         if type == 'quantile':
             return [(lower_bound[i], upper_bound[i]) for i in range(np.shape(X)[1])]
