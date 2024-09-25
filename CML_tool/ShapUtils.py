@@ -4,9 +4,12 @@ import warnings
 from joblib import Parallel, delayed
 import numpy as np
 from tqdm import tqdm
+
 from shap.maskers import Independent, Partition 
 from shap.explainers import Linear, Exact, Tree
 from shap.links import logit, identity
+
+from CML_tool.ML_Utils import compute_empirical_ci
 
 
 # %% 
@@ -233,7 +236,7 @@ def CI_shap(
         background_data,
         training_outcome,
         test_data,
-        randomness_distortion,
+        randomness_distortion="bootstrapping_test_set",
         n_jobs = 1,
         MC_repeats = 1000,
         alpha = 0.05,
@@ -241,7 +244,8 @@ def CI_shap(
         link_function = 'identity',
         feature_perturbation = 'interventional',
         n_samples = 1000,
-        max_samples = 1000
+        max_samples = 1000,
+        ci_type='pivot'
         ):
     '''
     Compute empirical variability and confidence intervals of Shapley values. 
@@ -255,8 +259,9 @@ def CI_shap(
             interventional). -> numpy.array 
         -training_outcome: labels or target values for the training instances. -> numpy.array
         -test_data: Data for which predictions shapley values are calculated. -> numpy.array
-        - randomness_distortion: Whether to compute CIs based on boostrapped samples of the training data ("bootstrapping")
-            or different randon seeds of the model during training on the full datatset ("seeds"). -> str
+        - randomness_distortion: Whether to compute CIs based on boostrapped samples of the training data ("bootstrapping_train_data"),
+            different randon seeds of the model during training on the full datatset ("seeds"),
+            or bootstrapped reapeats of the test set ("bootstrapping_test_set")-> str (Default:"bootstrapping_test_set")
         -n_jobs: number of threads to use durign parallel computation of the MonteCarlo samples. (Default: 1) -> int
         -MC_repeats: MonteCarlo simulations to estimate the Shapley values distribution.
             (Default:1000) -> int
@@ -272,6 +277,7 @@ def CI_shap(
         -n_samples: Only useful for feature_perturbation = 'observational'. Number of samples to use when estimating the transformation matrix used 
             to account for feature correlations. (Default:1000) -> int
         -max_samples: The maximum number of samples to use from the passed background data in the independent masker. (Default:1000) -> int
+        -ci_type: What confidence interval to compute from the empirical distribution: `pivot` or `quantile` based. 
         
     -Returns:
         - point estimate (np.array): mean SHAP values for each feature.
@@ -280,7 +286,7 @@ def CI_shap(
 
     '''
     
-    if randomness_distortion == 'bootstrapping':
+    if randomness_distortion == 'train_data_bootstrapping':
         # Estimate confidence intervals through Monte Carlo sampling via bootstrapped samples of the training dataset
         shap_values_samples = Parallel(n_jobs=n_jobs)(delayed(calculate_shap_values)(
             model = model,
@@ -297,6 +303,7 @@ def CI_shap(
                 np.random.choice(background_data.shape[0], size=background_data.shape[0], replace=True) for _ in range(MC_repeats)
                 ])
             )
+        
     elif randomness_distortion == 'seeds':
         shap_values_samples = Parallel(n_jobs=n_jobs)(delayed(calculate_shap_values)(
             model = model.set_params(**{'random_state':seed}),
@@ -311,17 +318,46 @@ def CI_shap(
             max_samples=max_samples
             ) for seed in tqdm(np.random.choice(range(MC_repeats), size=MC_repeats, replace=False))
             )
+        
+    elif randomness_distortion == 'bootstrapping_test_set':
+        shap_values_samples = Parallel(n_jobs=n_jobs)(delayed(calculate_shap_values)(
+            model = model,
+            background_data = background_data,
+            training_outcome = training_outcome,
+            pretrained=False,
+            test_data=test_data[idx,:],
+            explainer_type=explainer_type,
+            link_function=link_function,
+            feature_perturbation=feature_perturbation,
+            n_samples=n_samples,
+            max_samples=max_samples
+            ) for idx in tqdm([
+                np.random.choice(test_data.shape[0], size=test_data.shape[0], replace=True) for _ in range(MC_repeats)
+                ])
+            )
+    
     else:
         raise ValueError(f"`{randomness_distortion}` is not a supported option as `randomness_distortion` input.")
-        
-        
-    # Calculate the mean of the Shapley values as the point estimate
-    estimates = np.mean(shap_values_samples, axis=0)
 
-    # Calculate confidence intervals
-    lower_percentile = 100*alpha/2
-    upper_percentile = 100-lower_percentile
-    lower_bound = np.percentile(shap_values_samples, lower_percentile, axis=0)
-    upper_bound = np.percentile(shap_values_samples, upper_percentile, axis=0)
+    # Calculate point estimates Shapley values
+    point_estimates = calculate_shap_values(
+            model = model,
+            background_data = background_data,
+            training_outcome = training_outcome,
+            pretrained=False,
+            test_data=test_data,
+            explainer_type=explainer_type,
+            link_function=link_function,
+            feature_perturbation=feature_perturbation,
+            n_samples=n_samples,
+            max_samples=max_samples
+            )
     
-    return estimates, lower_bound, upper_bound
+    lower_bounds, upper_bounds = zip(*compute_empirical_ci(
+        X=shap_values_samples,
+        pivot=point_estimates, # Only used when ci_type='pivot'
+        alpha=alpha,
+        ci_type=ci_type
+    ))
+    
+    return point_estimates, np.array(lower_bounds), np.array(upper_bounds)
