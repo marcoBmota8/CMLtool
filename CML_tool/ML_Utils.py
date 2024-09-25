@@ -1,4 +1,5 @@
 import numpy as np
+
 from scipy.stats import norm
 from sklearn.metrics import confusion_matrix
 
@@ -35,20 +36,22 @@ def binary_classifier_metrics(threshold, y_true,probas):
 
     return accuracy, sensitivity, specificity,ppv,npv,f1_score
 
-def compute_empirical_ci(X: np.array, alpha:float=0.05, type:str='pivot', bootstrap_repeats: int=5000):
+def compute_empirical_ci(X: np.array, pivot:np.array=None, alpha:float=0.05, type:str='pivot'):
         '''
-        Compute confidence intervals of a data matrix with (repetition/bootstrapped)
-        samples across several dimensions.
+        Compute confidence intervals of a data matrix in each of its dimensions (i.e. columns).
+        This can be done either on the data matrix itself or in a bootstrapped sample of it.
                
         Args:
             -X (numpy.array): Data matrix with measurements (rows) and dimensions (columns).
+                Assumes samples are results of bootstrapped repeats of observed data.
+            -pivot(numpy.array): If X contains the results of a function applied to bootrsapped
+                samples of the original observations, `external_pivot` must provide the result of that same 
+                function on the original observations. (Default: None)
             -alpha (float): significance level. (Default:0.05)
             -type (str): Type of empirical confidence interval to return
-                *'quantile': Empirical distribution quantiles.
-                *'pivot': Pivot-based CI (Default).
-            -bootstrap_repeats (int): How many bootstrapped samples use to estimate the pivot
-                for a pivot-based confidence interval.
-
+                *'quantile': Empirical distribution quantiles. (Default)
+                *'pivot': Pivot-based confidence interval. Requires a `pivot` as input.
+    
         Returns:
             -ci_list (list): List of tuples of the form (CI_lower,CI_upper), one per passed dimension in X.
                 
@@ -57,20 +60,16 @@ def compute_empirical_ci(X: np.array, alpha:float=0.05, type:str='pivot', bootst
         # Calculate confidence intervals
         lower_percentile = 100*alpha/2
         upper_percentile = 100-lower_percentile
-        
-        #Compute bootstrapped samples means
-        bootstrap_data = np.vstack([X[np.random.choice(X.shape[0], X.shape[0], replace=True)] for _ in range(bootstrap_repeats)])
-        
+                    
         # Compute quantiles
-        lower_bound = np.percentile(bootstrap_data, lower_percentile, axis=0)
-        upper_bound = np.percentile(bootstrap_data, upper_percentile, axis=0)
+        lower_bound = np.percentile(X, lower_percentile, axis=0)
+        upper_bound = np.percentile(X, upper_percentile, axis=0)
         
         if type == 'quantile':
             return [(lower_bound[i], upper_bound[i]) for i in range(np.shape(X)[1])]
         elif type == 'pivot': 
-            mean_X = np.mean(X, axis=0)
-            lower_bound_pivot = 2*mean_X-upper_bound
-            upper_bound_pivot = 2*mean_X-lower_bound
+            lower_bound_pivot = 2*pivot-upper_bound
+            upper_bound_pivot = 2*pivot-lower_bound
             return [(lower_bound_pivot[i], upper_bound_pivot[i]) for i in range(np.shape(X)[1])]
         else:
             raise ValueError (f'{type} is not a valid confidence interval type.')
