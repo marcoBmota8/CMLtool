@@ -245,7 +245,8 @@ def CI_shap(
         feature_perturbation = 'interventional',
         n_samples = 1000,
         max_samples = 1000,
-        ci_type='pivot'
+        ci_type='pivot',
+        return_samples=False
         ):
     '''
     Compute empirical variability and confidence intervals of Shapley values. 
@@ -278,11 +279,13 @@ def CI_shap(
             to account for feature correlations. (Default:1000) -> int
         -max_samples: The maximum number of samples to use from the passed background data in the independent masker. (Default:1000) -> int
         -ci_type: What confidence interval to compute from the empirical distribution: `pivot` or `quantile` based. 
+        -return_samples: Whether or not to return the full samples matrix (Default: False).
         
     -Returns:
         - point estimate (np.array): mean SHAP values for each feature.
         - lower bounds (np.array): confidence interval lower bounds for each feature.
         - upper bounds (np.array): confidence interval upper bounds for each feature.
+        - shap_values_samples (np.array): Full shapley values matrix used to compute CIs. Only returned if `return_samples=True`. 
 
     '''
     
@@ -360,4 +363,7 @@ def CI_shap(
         ci_type=ci_type
     ))
     
-    return point_estimates, np.array(lower_bounds), np.array(upper_bounds)
+    if return_samples:
+        return point_estimates, np.array(lower_bounds), np.array(upper_bounds), shap_values_samples
+    else:
+        return point_estimates, np.array(lower_bounds), np.array(upper_bounds)
