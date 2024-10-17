@@ -63,9 +63,9 @@ def read_pickle(path, filename):
 def write_json(json_obj:dict=None, path:str=None, filename:str=None):
     
     if (path is not None) and (json_obj is not None) and (filename is not None):
-        
-        if  '.' in filename and filename.rsplit('.', 1)[-1]!='json': # make sure correct extension in filename
-            logging.INFO(f'Found filename={filename} with extension={filename.rsplit('.', 1)[-1]}...')
+        extension = filename.rsplit(".", 1)[-1]
+        if  '.' in filename and extension != 'json': # make sure correct extension in filename
+            logging.INFO(f'Found filename={filename} with extension={extension}...')
             filename = os.path.splitext(filename)[0]+'.json'
             logging.INFO(f'Using {filename}...')
             
@@ -84,8 +84,10 @@ def write_json(json_obj:dict=None, path:str=None, filename:str=None):
 def read_json(path: str = None, filename: str = None) -> dict:
     if path is not None and filename is not None:
         # Ensure the filename has a .json extension
-        if '.' in filename and filename.rsplit('.', 1)[-1] != 'json':
-            logging.info(f'Found filename={filename} with extension={filename.rsplit(".", 1)[-1]}...')
+        extension = filename.rsplit(".", 1)[-1]
+        if '.' in filename and extension != 'json':
+            
+            logging.info(f'Found filename={filename} with extension={extension}...')
             filename = os.path.splitext(filename)[0] + '.json'
             logging.info(f'Using {filename}...')
         elif '.' not in filename:
