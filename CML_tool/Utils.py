@@ -59,6 +59,52 @@ def read_pickle(path, filename):
                     break
         return pd.concat(loaded_chunks)
 
+
+def write_json(json_obj:dict=None, path:str=None, filename:str=None):
+    
+    if (path is not None) and (json_obj is not None) and (filename is not None):
+        
+        if  '.' in filename and filename.rsplit('.', 1)[-1]!='json': # make sure correct extension in filename
+            logging.INFO(f'Found filename={filename} with extension={filename.rsplit('.', 1)[-1]}...')
+            filename = os.path.splitext(filename)[0]+'.json'
+            logging.INFO(f'Using {filename}...')
+            
+        if os.path.exists(os.path.join(path,filename+".json")): # Check if object exists
+            raise FileExistsError(f"{filename}.json already exists, erase it before procceding if you want to overide it.")
+            
+        else: # Save the object
+            os.makedirs(path, exist_ok=True) # Ensure that the host folder exists
+            logging.info(msg = f"Saving dictionary object as {filename}.json at {path} ..." )
+            with open(os.path.join(path,filename+'.json'), "w") as f:
+                json.dump(json_obj, f, indent=4)
+                
+    else:
+        raise ValueError('No filename, path or object passed.')
+
+def read_json(path: str = None, filename: str = None) -> dict:
+    if path is not None and filename is not None:
+        # Ensure the filename has a .json extension
+        if '.' in filename and filename.rsplit('.', 1)[-1] != 'json':
+            logging.info(f'Found filename={filename} with extension={filename.rsplit(".", 1)[-1]}...')
+            filename = os.path.splitext(filename)[0] + '.json'
+            logging.info(f'Using {filename}...')
+        elif '.' not in filename:
+            filename += '.json'
+
+        full_path = os.path.join(path, filename)
+
+        if not os.path.exists(full_path):
+            raise FileNotFoundError(f"The file {full_path} does not exist.")
+
+        try:
+            with open(full_path, 'r') as f:
+                return json.load(f)
+        except:
+            logging.error(f"Failed to decode JSON from {full_path}. Ensure it's a valid JSON file.")
+            raise 
+    else:
+        raise ValueError('No filename or path provided.')    
+
 def save_df_w_metadata(df:pd.DataFrame, path:str=None, filename:str=None, metadata:dict=None, sep=',', header=True, index=True, encoding='utf-8'):
     """
     Save a pandas DataFrame to a CSV file with optional metadata.
