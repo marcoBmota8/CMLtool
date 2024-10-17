@@ -379,37 +379,3 @@ class BootstrapLinearModel:
         
         return shap_values_samples, shap_dict, feature_importance
         
-    
-    
-# %%
-
-if __name__ == '__main__':
-    
-    import pandas as pd       
-    from sklearn.datasets import make_classification
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.model_selection import train_test_split
-
-    # Generate noisy data for binary classification
-    X, y = make_classification(n_samples=1000, n_features=8, n_informative=3, n_redundant=0, random_state=42, class_sep=0.8, flip_y=0.2)
-
-    # Split the data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    # Train a logistic regression model on the training data
-    clf = LogisticRegression(random_state=42)
-    clf.fit(X_train, y_train)
-    
-    # Set the Boostrapping object
-    blm = BootstrapLinearModel(clf)
-    
-    # Run the bootstrapp simulations
-    blm.fit(X,y,X_test,1000)
-    
-    # Get coefficient CIs 
-    coefs_df = blm.coef_CI(alpha=0.05, nonzero_flag=True)
-    
-    # Get SHAP values CIs
-    shap_dict, fimp_df = blm.shap_CI(n_jobs=24)
-
-# %%
