@@ -51,7 +51,7 @@ class GelmanScaler:
             data=X.astype(float)
         else:
             raise NotImplementedError("Passed data type not supported.")
-        return np.array([i for i in range(data.shape[1]) if (set(data[:,i]) == {0.0, 1.0}) or (set(data[:,i]) == {True, False})])
+        return [i for i in range(data.shape[1] if set(np.unique(data[:,i])).issubset({0.0,1.0}) or set(np.unique(data[:,i])).issubset({True,False})]
         
     def fit(self, X, log_indices:list):
         # Correct DataFrames dtype to perform operations with float Series
