@@ -46,12 +46,12 @@ class GelmanScaler:
     @staticmethod
     def get_binary_indices(X):
         if isinstance(X, pd.DataFrame):
-            data=X.values
+            data=X.values.astype(float)
         elif isinstance(X, np.ndarray):
-            data=X.copy()
+            data=X.astype(float)
         else:
             raise NotImplementedError("Passed data type not supported.")
-        return np.array([i for i in range(data.shape[1]) if (set(data[:,i]) == {0, 1}) or (set(data[:,i]) == {True, False})])
+        return np.array([i for i in range(data.shape[1]) if (set(data[:,i]) == {0.0, 1.0}) or (set(data[:,i]) == {True, False})])
         
     def fit(self, X, log_indices:list):
         # Correct DataFrames dtype to perform operations with float Series
