@@ -118,7 +118,7 @@ def file_based_figure_saving(filename:str=None, path:str=None, format:str='png',
         
             if not os.path.exists(os.path.join(func_path,f"{func_filename}.{func_format}")):
                 # Save the figure to the specified path
-                fig.savefig(os.path.join(func_path, f"{func_filename}.{func_format}"), format=func_format, dpi=dpi)
+                fig.savefig(os.path.join(func_path, f"{func_filename}.{func_format}"), format=func_format, dpi=dpi, bbox_inches='tight')
                 logging.info(f"Figure SAVED to {func_path}/{func_filename}.{func_format}")
             else:
                 logging.info(f"Figure already exists at {func_path} as {func_filename}.{func_format}. Figure was not regenerated neither saved.")
