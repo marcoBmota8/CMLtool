@@ -42,8 +42,9 @@ def compute_empirical_ci(X: np.array, pivot:np.array=None, alpha:float=0.05, typ
         This can be done either on the data matrix itself or in a bootstrapped sample of it.
                
         Args:
-            -X (numpy.array): Data matrix with measurements (rows) and dimensions (columns).
-                Assumes samples are results of bootstrapped repeats of observed data.
+            -X (numpy.array or list of numpy.array): It can be a 1)data matrix with measurements (rows) to compute CIs across each dimension (columns); or 
+                2)list of measurement matrices to compute CIs across instances (e.g. patients) (rows) and dimensions (columns).
+                In essence, if a 2D array is passed it assumes rows are the samples whereas if a list is passed each matrix is considered a differente sample.
             -pivot(numpy.array): If X contains the results of a function applied to bootrsapped
                 samples of the original observations, `external_pivot` must provide the result of that same 
                 function on the original observations. (Default: None)
@@ -53,7 +54,10 @@ def compute_empirical_ci(X: np.array, pivot:np.array=None, alpha:float=0.05, typ
                 *'pivot': Pivot-based confidence interval. Requires a `pivot` as input.
     
         Returns:
-            -ci_list (list): List of tuples of the form (CI_lower,CI_upper), one per passed dimension in X.
+            -ci_list (list): List of tuples of the form (CI_lower, CI_upper), where
+                if X is a 2D array: there is one tuple per passed dimension each containing two floats
+                if X is a list of 2D array: there is one tuple per instance (e.g. patient) each containing two 1D arrays 
+                of length equal to the number of dimensions.
                 
         ''' 
         
