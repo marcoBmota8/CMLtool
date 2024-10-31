@@ -285,9 +285,15 @@ def CI_shap(
         - point estimate (np.array): mean SHAP values for each feature.
         - lower bounds (np.array): confidence interval lower bounds for each feature.
         - upper bounds (np.array): confidence interval upper bounds for each feature.
-        - shap_values_samples (np.array): Full shapley values matrix used to compute CIs. Only returned if `return_samples=True`. 
+        - shap_values_samples (list): List with all shapley values matrices used to compute CIs. Only returned if `return_samples=True`. 
 
     '''
+
+    assert isinstance(background_data, np.ndarray), '`background_data` must be a numpy array.'
+    assert isinstance(training_outcome, np.ndarray), '`training_outcome` must be a numpy array.'
+    assert isinstance(test_data, np.ndarray), '`test_data` must be a numpy array.'
+
+
     
     if randomness_distortion == 'train_data_bootstrapping':
         # Estimate confidence intervals through Monte Carlo sampling via bootstrapped samples of the training dataset
@@ -360,7 +366,7 @@ def CI_shap(
         X=shap_values_samples,
         pivot=point_estimates, # Only used when ci_type='pivot'
         alpha=alpha,
-        ci_type=ci_type
+        type=ci_type
     ))
     
     if return_samples:
