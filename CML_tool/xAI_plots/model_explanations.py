@@ -6,7 +6,7 @@ from sklearn.neighbors import KernelDensity
 
 
 def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map, title, xmax, bandwidth, 
-                         npoints=None, top:int=10, figsize:tuple=(4,2), return_all=False, color_kde='C0', color_rugs=''):
+                         npoints=None, top:int=10, figsize:tuple=(4,2), return_all=False, color_kde='C0', color_rugs='C1'):
 
     if isinstance(all_features_names, list):
         all_features_names = np.array(all_features_names)
@@ -48,8 +48,8 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
         axes.append(ax)
 
         ax.fill_between(x_grid, curve, color=color_kde, alpha=0.2, linewidth=0)
-        ax.plot(x_grid, curve, color=colot_kde, linewidth=1.0)
-        ax.scatter(row, np.zeros(len(row)), marker=3, color=colot_rugs, alpha=0.5)
+        ax.plot(x_grid, curve, color=color_kde, linewidth=1.0)
+        ax.scatter(row, np.zeros(len(row)), marker=3, color=color_rugs, alpha=0.2)
 
         ax.set_xlim(0.0, xmax)
         ax.patch.set_alpha(0)
