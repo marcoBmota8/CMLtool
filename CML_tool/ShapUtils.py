@@ -169,7 +169,8 @@ def calculate_shap_values(
             model = prediction_function,
             masker = masker,
             link = link_function_func,
-            linearize_link = True
+            linearize_link = True,
+            silent = True
         )
         
         # Compute Shapley values
@@ -218,6 +219,7 @@ def calculate_shap_values(
                 masker=masker,
                 feature_perturbation=feature_perturbation,
                 model_output=model_output,
+                silent=True
             )
         elif explainer_type == 'treeGPU':
             explainer = GPUTree(
@@ -226,6 +228,7 @@ def calculate_shap_values(
                 masker=masker,
                 feature_perturbation=feature_perturbation,
                 model_output=model_output,
+                silent=True
             )
             
         warnings.warn(f"WARNING: Provided Shapley values are in {explainer.model.tree_output} units.")
