@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 from shap.maskers import Independent, Partition 
-from shap.explainers import Linear, Exact, Tree
+from shap.explainers import Linear, Exact, Tree, GPUTree
 from shap.links import logit, identity
 
 from CML_tool.ML_Utils import compute_empirical_ci
@@ -40,7 +40,7 @@ def calculate_shap_values(
         -test_data: Data for which predictions shapley values are calculated. -> numpy.array
         -pretrained: Boolean indicating whether the passed model object is already trained on the
             background data or not. If False, model is fitted to the background data passed (Default: False) -> bool
-        -explainer_type: 'linear', 'exact' or 'tree'. Linear SHAP (linear models) and TreeExplainer (Lundberg et al. 2020) (tree-based models) 
+        -explainer_type: 'linear', 'exact', 'tree', 'treeGPU'. Linear SHAP (linear models) and TreeExplainer (Lundberg et al. 2020) (tree-based models) 
             are model-specific. Exact is model-agnostic. -> str 
             #TODO implement the fast model agnostic kernelSHAP (Linear LIME + Shapley values) 
         -link_function: The link function used to map between the output units of the model to the SHAP value units.
@@ -179,7 +179,7 @@ def calculate_shap_values(
             # TODO: support exact explainer for regression models.
             raise ValueError('Regressors currently not supported')
     
-    elif explainer_type == 'tree':
+    elif (explainer_type == 'tree') or (explainer_type == 'treeGPU'):
         
         # get model output
         if feature_perturbation=='observational':
@@ -211,14 +211,23 @@ def calculate_shap_values(
             else:
                 raise ValueError('Faulty model object was passed.')
         
-        explainer = Tree(
-            model=model,
-            data=background_data if feature_perturbation == 'interventional' else None,
-            masker=masker,
-            feature_perturbation=feature_perturbation,
-            model_output=model_output,
-        )
-        
+        if explainer_type == 'tree':
+            explainer = Tree(
+                model=model,
+                data=background_data if feature_perturbation == 'interventional' else None,
+                masker=masker,
+                feature_perturbation=feature_perturbation,
+                model_output=model_output,
+            )
+        elif explainer_type == 'treeGPU':
+            explainer = GPUTree(
+                model=model,
+                data=background_data if feature_perturbation == 'interventional' else None,
+                masker=masker,
+                feature_perturbation=feature_perturbation,
+                model_output=model_output,
+            )
+            
         warnings.warn(f"WARNING: Provided Shapley values are in {explainer.model.tree_output} units.")
         
         # Compute Shapley values
