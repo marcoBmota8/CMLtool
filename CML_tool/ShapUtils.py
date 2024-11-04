@@ -242,7 +242,6 @@ def calculate_shap_values(
     #compute and return shapley values
     return shap_values
 
-
 def CI_shap(
         model,
         background_data,
@@ -258,7 +257,7 @@ def CI_shap(
         n_samples = 1000,
         max_samples = 1000,
         ci_type='pivot',
-        return_samples=False
+        return_only_samples=False
         ):
     '''
     Compute empirical variability and confidence intervals of Shapley values. 
@@ -291,7 +290,7 @@ def CI_shap(
             to account for feature correlations. (Default:1000) -> int
         -max_samples: The maximum number of samples to use from the passed background data in the independent masker. (Default:1000) -> int
         -ci_type: What confidence interval to compute from the empirical distribution: `pivot` or `quantile` based. 
-        -return_samples: Whether or not to return the full samples matrix (Default: False).
+        -return_only_samples: Whether or not to return the full samples matrix only or also point estimates and confidence intervals(Default: False).
         
     -Returns:
         - point estimate (np.array): mean SHAP values for each feature.
@@ -360,28 +359,29 @@ def CI_shap(
     else:
         raise ValueError(f"`{randomness_distortion}` is not a supported option as `randomness_distortion` input.")
 
-    # Calculate point estimates Shapley values
-    point_estimates = calculate_shap_values(
-            model = model,
-            background_data = background_data,
-            training_outcome = training_outcome,
-            pretrained=False,
-            test_data=test_data,
-            explainer_type=explainer_type,
-            link_function=link_function,
-            feature_perturbation=feature_perturbation,
-            n_samples=n_samples,
-            max_samples=max_samples
-            )
+    if not return_only_samples:
+        # Calculate point estimates Shapley values
+        point_estimates = calculate_shap_values(
+                model = model,
+                background_data = background_data,
+                training_outcome = training_outcome,
+                pretrained=False,
+                test_data=test_data,
+                explainer_type=explainer_type,
+                link_function=link_function,
+                feature_perturbation=feature_perturbation,
+                n_samples=n_samples,
+                max_samples=max_samples
+                )
+        
+        lower_bounds, upper_bounds = zip(*compute_empirical_ci(
+            X=shap_values_samples,
+            pivot=point_estimates, # Only used when ci_type='pivot'
+            alpha=alpha,
+            type=ci_type
+        ))
     
-    lower_bounds, upper_bounds = zip(*compute_empirical_ci(
-        X=shap_values_samples,
-        pivot=point_estimates, # Only used when ci_type='pivot'
-        alpha=alpha,
-        type=ci_type
-    ))
-    
-    if return_samples:
-        return point_estimates, np.array(lower_bounds), np.array(upper_bounds), shap_values_samples
+    if return_only_samples:
+        return np.stack(shap_values_samples, axis=-1)
     else:
-        return point_estimates, np.array(lower_bounds), np.array(upper_bounds)
+        return np.stack(shap_values_samples, axis=-1), point_estimates, np.array(lower_bounds), np.array(upper_bounds)
