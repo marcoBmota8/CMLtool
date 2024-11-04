@@ -39,27 +39,27 @@ def write_pickle(object, path, filename):
             raise ValueError(
                 "File couldn't be pickle directly and neither in chunks (DataFrame). Revise the write_pickle fucntion for your current use.")        
         
-def read_pickle(path, filename, chunk_size=1024, silent=False):
+def read_pickle(path, filename, chunk_size=1024, silent=True):
     if not filename.endswith(".pkl"):
         filename = filename+".pkl"
-        file_path = os.path.join(path, filename)
-        file_size = os.path.getsize(file_path)
-        if not silent:
-            progress_bar = tqdm(total=file_size, unit='B', unit_scale=True, desc="Reading pickle file")
+    file_path = os.path.join(path, filename)
+    file_size = os.path.getsize(file_path)
+    if not silent:
+        progress_bar = tqdm(total=file_size, unit='B', unit_scale=True, desc="Reading pickle file")
 
-        buffer = bytearray()
-        with open(file_path, 'rb') as f:
-            while True:
-                chunk = f.read(chunk_size)
-                if not chunk:
-                    break
-                buffer.extend(chunk)
-                if not silent:
-                    progress_bar.update(len(chunk))
-        if not silent:
-            progress_bar.close()
-        data = pickle.loads(buffer)
-        return data
+    buffer = bytearray()
+    with open(file_path, 'rb') as f:
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                break
+            buffer.extend(chunk)
+            if not silent:
+                progress_bar.update(len(chunk))
+    if not silent:
+        progress_bar.close()
+    data = pickle.loads(buffer)
+    return data
 
 
 def write_json(json_obj:dict=None, path:str=None, filename:str=None):
