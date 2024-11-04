@@ -234,7 +234,7 @@ def calculate_shap_values(
         warnings.warn(f"WARNING: Provided Shapley values are in {explainer.model.tree_output} units.")
         
         # Compute Shapley values
-        shap_values = explainer.shap_values(test_data)[0]   
+        shap_values = explainer.shap_values(test_data)   
     
     else:
         raise ValueError(f'Explainer_type: {explainer_type} currently not supported.')
@@ -381,7 +381,10 @@ def CI_shap(
             type=ci_type
         ))
     
+    # Transform into an array
+    shap_values_samples = np.stack(shap_values_samples, axis=-1)
+    
     if return_only_samples:
-        return np.stack(shap_values_samples, axis=-1)
+        return shap_values_samples
     else:
-        return np.stack(shap_values_samples, axis=-1), point_estimates, np.array(lower_bounds), np.array(upper_bounds)
+        return shap_values_samples, point_estimates, np.array(lower_bounds), np.array(upper_bounds)
