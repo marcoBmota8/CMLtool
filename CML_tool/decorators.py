@@ -11,9 +11,9 @@ from CML_tool.Utils import write_pickle, read_pickle
 # Configure the logging module
 logging.basicConfig(level=logging.INFO)
 
-def file_based_cacheing(path:str=None, filename:str=None,  extension_desired:str='.pkl'):
+def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str='.pkl'):
     """
-    File based cacheing. 
+    File based cacheing with support for multiple formats including NPZ. 
     
     If path, filename and/or extension argument are passed to the function instance
     the decorator decorates those are used instead of the values in the decorator. If no path and/or 
@@ -29,12 +29,13 @@ def file_based_cacheing(path:str=None, filename:str=None,  extension_desired:str
     
     If the user-specified saving fails, the decorator default behavior is
     to override the user-specified file_name by removing the specified extension 
-    if any, and .append pkl at the end.
+    if any, and append pkl at the end.
     It then saves the data/python object.
 
-    If reading fails, we assume the specified file does not exist and
-    the function will be run and the result saved.
-
+    Parameters:
+        path (str): Directory path for caching
+        filename (str): Name of the cache file
+        extension_desired (str): File extension ('.pkl', '.csv', '.json', '.npy', '.npz')
     """
     def decorator(func):
         def wrapper(*args, **kwargs):
@@ -62,7 +63,17 @@ def file_based_cacheing(path:str=None, filename:str=None,  extension_desired:str
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
                     elif 'npy' in extension_desired_fn:
                         obj_var = np.load(os.path.join(path_fn, filename_fn+".npy"))
-                        logging.info(msg = "Function "+func.__name__+" CACHED.")                        
+                        logging.info(msg = "Function "+func.__name__+" CACHED.")
+                    elif 'npz' in extension_desired_fn:
+                        # Load NPZ file - note that this returns a dict-like object
+                        with np.load(os.path.join(path_fn, filename_fn+".npz")) as data:
+                            # If there's only one array, return it directly
+                            if len(data.files) == 1:
+                                obj_var = data[data.files[0]]
+                            else:
+                                # Otherwise return the dict-like object
+                                obj_var = {k: data[k] for k in data.files}
+                        logging.info(msg = "Function "+func.__name__+" CACHED.")
                     else:
                         raise ValueError('File not found or file caching failed.')
 
@@ -70,19 +81,25 @@ def file_based_cacheing(path:str=None, filename:str=None,  extension_desired:str
                     logging.info(msg = "Executing "+func.__name__+" ..." )
                     obj_var = func(*args, **kwargs) # run the function and obtain the resulting object
                     try:
+                        os.makedirs(path_fn, exist_ok=True) # Ensure that the host folder exists
+                        
                         if 'pkl' in extension_desired_fn:
-                            os.makedirs(path_fn, exist_ok=True) # Ensure that the host folder exists
                             write_pickle(object = obj_var, path=path_fn, filename=filename_fn+'.pkl')
                         elif 'cvs' in extension_desired_fn:
-                            os.makedirs(path_fn, exist_ok=True) # Ensure that the host folder exists
                             obj_var.to_csv(path_or_buf=os.path.join(path_fn,filename_fn+".csv"))
                         elif 'json' in extension_desired_fn:
-                            os.makedirs(path_fn, exist_ok=True) # Ensure that the host folder exists
                             with open(os.path.join(path_fn, filename_fn+".json"), "w") as outfile:
                                 json.dump(obj_var, outfile)
                         elif 'npy' in extension_desired_fn:
-                            os.makedirs(path_fn, exist_ok=True) # Ensure that the host folder exists
                             np.save(os.path.join(path_fn, filename_fn+".npy"), obj_var)
+                        elif 'npz' in extension_desired_fn:
+                            if isinstance(obj_var, dict):
+                                # If input is a dictionary, save each key-value pair
+                                np.savez_compressed(os.path.join(path_fn, filename_fn+".npz"), **obj_var)
+                            else:
+                                # If input is a single array, save it with a default key
+                                np.savez_compressed(os.path.join(path_fn, filename_fn+".npz"), array=obj_var)
+
                         else:
                             raise ValueError('No developed option is valid for input combination of python object and desired extension.')
                     except: # Default saving is in ".pkl" format
