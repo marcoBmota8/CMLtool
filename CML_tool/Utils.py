@@ -41,23 +41,13 @@ def write_pickle(object, path, filename):
 def read_pickle(path, filename):
     if not filename.endswith(".pkl"):
         filename = filename+".pkl"
-    
-    # Try to read the pickle file as it had been saved as a single file
-    try:
-        with open(os.path.join(path,filename), "rb") as file:
-            return pickle.load(file)
-    # If file was saved as chuncks reading needs sequential loading and appending
-    except:
-        loaded_chunks = []
-        with open(os.path.join(path,filename), 'rb') as file:
+        
+    with open(os.path.join(path,filename), 'rb') as file:
+        try:
             while True:
-                try:
-                    chunk = pickle.load(file)
-                    loaded_chunks.append(chunk)
-                except EOFError:
-                    # Reached the end of the file
-                    break
-        return pd.concat(loaded_chunks)
+                yield pickle.load(file)
+        except EOFError:
+            pass
 
 
 def write_json(json_obj:dict=None, path:str=None, filename:str=None):
