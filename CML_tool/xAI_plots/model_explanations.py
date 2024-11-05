@@ -24,9 +24,9 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
     X_top = abs(shaps)[:,top_idx].T # Shap values for the top features
 
     if data_rep.lower() == 'signatures':
-        labels = [f'[{x}]:'+features_name_map.get(x, None) for x in all_features_names[top_idx]]
+        labels = [f'[{x}]:'+features_name_map.get(x, 'Unknown') for x in all_features_names[top_idx]]
     elif data_rep.lower() == 'channels':
-        labels = [features_name_map.get(x,None) if x in all_features_names[top_idx] else x for x in all_features_names[top_idx]]
+        labels = [features_name_map.get(x,'Unknown') if x in all_features_names[top_idx] else x for x in all_features_names[top_idx]]
     else:
         raise ValueError(f'Data representation `{data_rep}` is not supported.')
         
