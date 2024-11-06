@@ -170,12 +170,11 @@ def calculate_shap_values(
             masker = masker,
             link = link_function_func,
             linearize_link = True,
-            silent = True
         )
         
         # Compute Shapley values
         if model_type == 'classifier':
-            shap_values = explainer(test_data)
+            shap_values = explainer(test_data).values[...,1] # Positive class shapley values
         else:
             # TODO: support exact explainer for regression models.
             raise ValueError('Regressors currently not supported')
@@ -234,7 +233,7 @@ def calculate_shap_values(
         warnings.warn(f"WARNING: Provided Shapley values are in {explainer.model.tree_output} units.")
         
         # Compute Shapley values
-        shap_values = explainer.shap_values(test_data)   
+        shap_values = np.array(explainer.shap_values(test_data))[1,...]
         
         # Return the shapley values for positive class in binary classification problems
 
@@ -242,14 +241,8 @@ def calculate_shap_values(
         raise ValueError(f'Explainer_type: {explainer_type} currently not supported.')
 
     #compute and return shapley values
-    if model_type=='regressor':
-        shaps = shap_values
-    elif model_type=='classifier':
-        shaps = shap_values.values[:,:,1] # Shapley values for the positive class
-    else :
-        shaps = shap_values
         
-    return shaps
+    return shap_values
 
 def CI_shap(
         model,
@@ -397,3 +390,4 @@ def CI_shap(
         return shap_values_samples
     else:
         return shap_values_samples, point_estimates, np.array(lower_bounds), np.array(upper_bounds)
+# %%
