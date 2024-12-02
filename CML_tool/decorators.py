@@ -47,23 +47,27 @@ def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str=
             else:
                 filename_fn=None
             extension_desired_fn = kwargs.get('extension_desired', extension_desired)
-                        
+            cached = False # flag indicating whether the file was cached or not            
             if (path_fn is not None) and (filename_fn is not None):
         
                 try: # Try to retrieve the object
                     if 'pkl' in extension_desired_fn:
                         obj_var = read_pickle(path=path_fn, filename=filename_fn+".pkl")
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
+                        cached = True
                     elif 'cvs' in extension_desired_fn:
                         obj_var = pd.read_csv(filepath = os.path.join(path_fn,filename_fn+".csv"))
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
+                        cached = True
                     elif 'json' in extension_desired_fn:
                         with open(os.path.join(path_fn, filename_fn+".json"),'r') as openfile:
                             obj_var = json.load(openfile)
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
+                        cached = True
                     elif 'npy' in extension_desired_fn:
                         obj_var = np.load(os.path.join(path_fn, filename_fn+".npy"))
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
+                        cached = True
                     elif 'npz' in extension_desired_fn:
                         # Load NPZ file - note that this returns a dict-like object
                         with np.load(os.path.join(path_fn, filename_fn+".npz")) as data:
@@ -74,8 +78,9 @@ def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str=
                                 # Otherwise return the dict-like object
                                 obj_var = {k: data[k] for k in data.files}
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
+                        cached = True
                     else:
-                        raise ValueError('File not found or file caching failed.')
+                        raise ValueError(f'File extension {extension_desired_fn} not supported.')
 
                 except: # Run the function and save the object
                     logging.info(msg = "Executing "+func.__name__+" ..." )
@@ -108,7 +113,7 @@ def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str=
 
                     logging.info(msg = "Function "+func.__name__+" EXECUTION COMPLETE & RESULT FILE SAVED.")
 
-                return obj_var
+                return obj_var, cachedc
             else:
                 raise ValueError(f'Either "path", "filename" arguments were not passed to the decorator or instance of the function {func.__name__}.')
 
