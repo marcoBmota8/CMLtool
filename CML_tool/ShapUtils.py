@@ -1,5 +1,6 @@
 # %%
 import warnings
+import logging
 
 from joblib import Parallel, delayed
 import numpy as np
@@ -258,8 +259,9 @@ def CI_shap(
         feature_perturbation = 'interventional',
         n_samples = 1000,
         max_samples = 1000,
-        ci_type='pivot',
-        return_only_samples=False
+        ci_type=None,
+        return_samples=False,
+        return_mav=True
         ):
     '''
     Compute empirical variability and confidence intervals of Shapley values. 
@@ -291,8 +293,9 @@ def CI_shap(
         -n_samples: Only useful for feature_perturbation = 'observational'. Number of samples to use when estimating the transformation matrix used 
             to account for feature correlations. (Default:1000) -> int
         -max_samples: The maximum number of samples to use from the passed background data in the independent masker. (Default:1000) -> int
-        -ci_type: What confidence interval to compute from the empirical distribution: `pivot` or `quantile` based. 
-        -return_only_samples: Whether or not to return the full samples matrix only or also point estimates and confidence intervals(Default: False).
+        -ci_type: What confidence interval to compute from the empirical distribution: `pivot` or `quantile` based. Default is to not return neither (Default: None)
+        -return_samples: Whether or not to return the full samples matrix.(Default: False).
+        -return_mav: Whather or not to return mean absolute value shap values across the set instances (e.g. patients). (Default: True)
         
     -Returns:
         - point estimate (np.array): mean SHAP values for each feature.
@@ -301,6 +304,8 @@ def CI_shap(
         - shap_values_samples (list): List with all shapley values matrices used to compute CIs. Only returned if `return_samples=True`. 
 
     '''
+    
+    assert return_mav!=return_samples, 'Cannot return both mean absolute values and the full samples matrix'
 
     assert isinstance(background_data, np.ndarray), '`background_data` must be a numpy array.'
     assert isinstance(training_outcome, np.ndarray), '`training_outcome` must be a numpy array.'
@@ -361,7 +366,7 @@ def CI_shap(
     else:
         raise ValueError(f"`{randomness_distortion}` is not a supported option as `randomness_distortion` input.")
 
-    if not return_only_samples:
+    if ci_type is not None:
         # Calculate point estimates Shapley values
         point_estimates = calculate_shap_values(
                 model = model,
@@ -386,8 +391,14 @@ def CI_shap(
     # Transform into an array
     shap_values_samples = np.stack(shap_values_samples, axis=-1)
     
-    if return_only_samples:
-        return shap_values_samples
+    if return_mav:
+        return np.mean(abs(shap_values_samples), axis=0).T
+    elif return_samples:
+        if ci_type is None:
+            return shap_values_samples
+        else: 
+            return shap_values_samples, point_estimates, np.array(lower_bounds), np.array(upper_bounds)
     else:
-        return shap_values_samples, point_estimates, np.array(lower_bounds), np.array(upper_bounds)
+        logging.info('Neither Shapley sampels matrix nor mean absoliute values were requested. Thus defaulting to returning the full samples matrix...')
+        return shap_values_samples
 # %%
