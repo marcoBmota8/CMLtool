@@ -6,6 +6,7 @@ import numpy as np
 import json
 import pickle
 import tqdm
+import math
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -211,6 +212,29 @@ def round_to_resolution(x, resolution, direction):
         return sign*np.round(abs(x)/resolution) * resolution        
     else:
         raise ValueError('Rounding direction is misspecified. Choose among "ceil", "absolute-ceil", "floor", "absolute-floor" and "round".')
+
+def round_up_sig_figs(number, sig_figs):
+    if number == 0:
+        return 0
+    
+    # Handle negative numbers
+    sign = 1 if number > 0 else -1
+    number = abs(number)
+    
+    # Calculate the magnitude (power of 10) 
+    magnitude = math.floor(math.log10(number))
+    
+    # Scale the number to make the first sig_figs digits 
+    scaled = number / (10 ** (magnitude - sig_figs + 1))
+    
+    # Round up the scaled number 
+    rounded_scaled = math.ceil(scaled)
+    
+    # Scale back down
+    result = rounded_scaled * (10 ** (magnitude - sig_figs + 1))
+    
+    # Reapply the original sign
+    return sign * result
     
 def look_up_description(df,description):
     '''
