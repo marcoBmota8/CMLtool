@@ -1,12 +1,18 @@
 
+import warnings
+
 import numpy as np
 import matplotlib.pyplot as plt
 
 from sklearn.neighbors import KernelDensity
 
 
-def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map, title, xmax, bandwidth, 
-                         npoints=None, top:int=10, figsize:tuple=(4,2), return_all=False, color_kde='C0', color_rugs='C1'):
+def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map, title, xmax, bandwidth, signs=None, npoints=None,
+                         top:int=10, overlap: float=0.5, figsize:tuple=(4,2), return_all=False, color_kde='C0', color_rugs='C1'):
+    
+    # check if passed shaps are absolute
+    if  all(all(val >= 0 for val in row) for row in shaps):
+        raise UserWarning(f'All shapley values are positive. It is highly likely what was passed is abs(SHAP).')
 
     if isinstance(all_features_names, list):
         all_features_names = np.array(all_features_names)
@@ -18,17 +24,22 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
     if npoints is None:
         npoints=int(xmax/bandwidth)
     
-    shap_means = np.mean(abs(shaps), axis=0) # Mean shap value for each feature
-    top_idx = list(np.argsort(shap_means)[::-1][:top]) # The indices for the top features based on absolute mean shapley value
+    shap_means = np.mean(shaps, axis=0) # Mean shap value for each feature
+    top_idx = list(np.argsort(abs(shap_means))[::-1][:top]) # The indices for the top features based on absolute mean shapley value
     
-    X_top = abs(shaps)[:,top_idx].T # Shap values for the top features
+    X_top = shaps[:,top_idx].T # Shap values for the top features
 
     if data_rep.lower() == 'signatures':
-        labels = [f'[{x}]:'+features_name_map.get(x, 'Unknown') for x in all_features_names[top_idx]]
+        labels = [f'[{x}]: '+features_name_map.get(x, 'Unknown') for x in all_features_names[top_idx]]
     elif data_rep.lower() == 'channels':
         labels = [features_name_map.get(x,'Unknown') if x in all_features_names[top_idx] else x for x in all_features_names[top_idx]]
     else:
         raise ValueError(f'Data representation `{data_rep}` is not supported.')
+    
+    # Add signs
+    if signs is not None:
+        signs_labels = ['+' if s > 0 else '-' if s < 0 else '0' for s in signs[top_idx]] # Whether the mean shap across patients is protective or inducive
+        labels = [l+ ' ' + '(' + signs_labels[i] + ')' for i,l in enumerate(labels)]
         
     fig = plt.figure(figsize=figsize)
     gs = fig.add_gridspec(nrows=top, ncols=1)
@@ -47,9 +58,9 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
         ax = fig.add_subplot(gs[i:i+1, :])
         axes.append(ax)
 
-        ax.fill_between(x_grid, curve, color=color_kde, alpha=0.2, linewidth=0)
-        ax.plot(x_grid, curve, color=color_kde, linewidth=1.0)
-        ax.scatter(row, np.zeros(len(row)), marker=3, color=color_rugs, alpha=0.2)
+        ax.fill_between(x_grid, curve, color=color_kde, alpha=0.25, linewidth=0)
+        ax.plot(x_grid, curve, color=color_kde, linewidth=1.0, alpha=0.75)
+        ax.scatter(row, np.zeros(len(row)), marker=3, color=color_rugs, alpha=0.15)
 
         ax.set_xlim(0.0, xmax)
         ax.patch.set_alpha(0)
@@ -67,8 +78,9 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
 
         else:
             ax.set_xlabel(r'Mean Absolute Shapley Value')
+            
 
-        ax.text(-0.05, 0.75, labels[i],
+        ax.text(0.0, 1.0, labels[i],
                 horizontalalignment='right',
                 verticalalignment='center')
         
@@ -85,7 +97,7 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
     for ax in axes:
         ax.set_ylim([ymin, ymax])
 
-    gs.update(hspace=-0.5)
+    gs.update(hspace=-overlap)
     gs.update(top=1)
     fig.suptitle(title)
     
