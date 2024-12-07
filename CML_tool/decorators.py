@@ -113,7 +113,7 @@ def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str=
 
                     logging.info(msg = "Function "+func.__name__+" EXECUTION COMPLETE & RESULT FILE SAVED.")
 
-                return obj_var, cachedc
+                return obj_var, cached
             else:
                 raise ValueError(f'Either "path", "filename" arguments were not passed to the decorator or instance of the function {func.__name__}.')
 

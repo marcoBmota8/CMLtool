@@ -261,7 +261,8 @@ def CI_shap(
         max_samples = 1000,
         ci_type=None,
         return_samples=False,
-        return_mav=True
+        return_mv = True,
+        return_mav=False
         ):
     '''
     Compute empirical variability and confidence intervals of Shapley values. 
@@ -295,7 +296,8 @@ def CI_shap(
         -max_samples: The maximum number of samples to use from the passed background data in the independent masker. (Default:1000) -> int
         -ci_type: What confidence interval to compute from the empirical distribution: `pivot` or `quantile` based. Default is to not return neither (Default: None)
         -return_samples: Whether or not to return the full samples matrix.(Default: False).
-        -return_mav: Whather or not to return mean absolute value shap values across the set instances (e.g. patients). (Default: True)
+        -return_mav: Whather or not to return mean absolute value shap values across the set instances (e.g. patients).
+            It also returns a list with the sign of the mean across instances and across repetitions for each feature (Default: True)
         
     -Returns:
         - point estimate (np.array): mean SHAP values for each feature.
@@ -392,7 +394,7 @@ def CI_shap(
     shap_values_samples = np.stack(shap_values_samples, axis=-1)
     
     if return_mav:
-        return np.mean(abs(shap_values_samples), axis=0).T
+        return np.mean(abs(shap_values_samples), axis=0).T, np.sign(np.mean(np.mean(shap_values_samples, axis=0), axis=1))
     elif return_samples:
         if ci_type is None:
             return shap_values_samples
