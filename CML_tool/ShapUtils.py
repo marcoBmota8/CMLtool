@@ -261,8 +261,7 @@ def CI_shap(
         max_samples = 1000,
         ci_type=None,
         return_samples=False,
-        return_mv = True,
-        return_mav=False
+        return_mav=True
         ):
     '''
     Compute empirical variability and confidence intervals of Shapley values. 
