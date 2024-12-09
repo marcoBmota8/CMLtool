@@ -1,5 +1,5 @@
 
-import warnings
+import logging 
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,7 +12,7 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
     
     # check if passed shaps are absolute
     if  all(all(val >= 0 for val in row) for row in shaps):
-        raise UserWarning(f'All shapley values are positive. It is highly likely what was passed is abs(SHAP).')
+        logging.info(f'All shapley values are positive. It is highly likely what was passed is abs(SHAP).')
 
     if isinstance(all_features_names, list):
         all_features_names = np.array(all_features_names)
