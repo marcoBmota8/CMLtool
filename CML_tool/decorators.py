@@ -13,7 +13,8 @@ logging.basicConfig(level=logging.INFO)
 
 def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str='.pkl'):
     """
-    File based cacheing with support for multiple formats including NPZ. 
+    File based cacheing with support for multiple formats including NPZ. For several arrays as NPZ
+    it returns a dictionary with the key:array pairs. 
     
     If path, filename and/or extension argument are passed to the function instance
     the decorator decorates those are used instead of the values in the decorator. If no path and/or 
@@ -69,15 +70,17 @@ def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str=
                         logging.info(msg = "Function "+func.__name__+" CACHED.")
                         cached = True
                     elif 'npz' in extension_desired_fn:
-                        # Load NPZ file - note that this returns a dict-like object
-                        with np.load(os.path.join(path_fn, filename_fn+".npz")) as data:
-                            # If there's only one array, return it directly
-                            if len(data.files) == 1:
-                                obj_var = data[data.files[0]]
-                            else:
-                                # Otherwise return the dict-like object
-                                obj_var = {k: data[k] for k in data.files}
-                        logging.info(msg = "Function "+func.__name__+" CACHED.")
+                        try:
+                            with np.load(os.path.join(path_fn, filename_fn+".npz")) as data: # Load NPZ file - note that this returns a dict-like object
+                                if len(data.files) == 1: # If there's only one array, return it directly
+                                    obj_var = data[data.files[0]]
+                                else: # Otherwise return the dict object 
+                                    obj_var = {k: data[k] for k in data.files}
+                            logging.info(msg = "Function "+func.__name__+" CACHED.")
+                        except:
+                            obj_var = read_pickle(path=path_fn, filename=filename_fn+".pkl")
+                            logging.info(msg=f"No NPZ file {filename_fn+'.npz'} was found but a PICKLE file with that name was found and retrieved.")
+                            logging.info(msg = "Hence, function "+func.__name__+" CACHED.")
                         cached = True
                     else:
                         raise ValueError(f'File extension {extension_desired_fn} not supported.')
@@ -99,21 +102,26 @@ def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str=
                             np.save(os.path.join(path_fn, filename_fn+".npy"), obj_var)
                         elif 'npz' in extension_desired_fn:
                             if isinstance(obj_var, dict):
-                                # If input is a dictionary, save each key-value pair
+                                # If fn output is a dictionary, save each key-value pair
                                 np.savez_compressed(os.path.join(path_fn, filename_fn+".npz"), **obj_var)
+                            elif isinstance(obj_var, tuple):
+                                logging.error(f'The decorated function cannot return several arrays it must return a dictionary with key-array pairs. \n For safety the arrays were saved as a tuple in a.pkl file')
+                                raise ValueError('')
+                            elif isinstance(obj_var, np.ndarray):
+                                # If output is only one array, save it with the default key as a dictionary
+                                np.savez_compressed(os.path.join(path_fn, filename_fn+".npz"), obj_var)    
                             else:
-                                # If input is a single array, save it with a default key
-                                np.savez_compressed(os.path.join(path_fn, filename_fn+".npz"), array=obj_var)
-
+                                raise ValueError(f'The decorated function must return a dictionary with key-array pairs.')                            
                         else:
                             raise ValueError('No developed option is valid for input combination of python object and desired extension.')
                     except: # Default saving is in ".pkl" format
-                        logging.info(msg = f"Defaulting to pickle saving as: {os.path.join(path_fn,filename_fn+'.pkl')}")
+                        logging.info(msg = f"Selected save option {extension_desired_fn} FAILED, \n Defaulting to pickle saving as: {os.path.join(path_fn,filename_fn+'.pkl')}")
                         write_pickle(object = obj_var, path=path_fn, filename=filename_fn+'.pkl')
 
                     logging.info(msg = "Function "+func.__name__+" EXECUTION COMPLETE & RESULT FILE SAVED.")
-
+                    
                 return obj_var, cached
+            
             else:
                 raise ValueError(f'Either "path", "filename" arguments were not passed to the decorator or instance of the function {func.__name__}.')
 
