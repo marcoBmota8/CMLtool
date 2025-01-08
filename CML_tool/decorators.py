@@ -14,7 +14,9 @@ logging.basicConfig(level=logging.INFO)
 def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str='.pkl'):
     """
     File based cacheing with support for multiple formats including NPZ. For several arrays as NPZ
-    it returns a dictionary with the key:array pairs. 
+    it returns a dictionary with the key:array pairs and a boolean indicating whether the decorated function
+    was cached or not. The latter is useful for long data pipelines with chained sections/checkpoints where the output of one
+    is the input of the next one.
     
     If path, filename and/or extension argument are passed to the function instance
     the decorator decorates those are used instead of the values in the decorator. If no path and/or 
@@ -147,6 +149,7 @@ def file_based_figure_saving(filename:str=None, path:str=None, format:str='png',
                 raise ValueError('No path passed either in the plotting function or its decorator.') 
         
             if not os.path.exists(os.path.join(func_path,f"{func_filename}.{func_format}")):
+                os.makedirs(func_path, exist_ok=True)
                 # Save the figure to the specified path
                 fig.savefig(os.path.join(func_path, f"{func_filename}.{func_format}"), format=func_format, dpi=dpi, bbox_inches='tight')
                 logging.info(f"Figure SAVED to {func_path}/{func_filename}.{func_format}")
