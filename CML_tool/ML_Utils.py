@@ -1,7 +1,8 @@
 import numpy as np
 
-from scipy.stats import norm
+from scipy.stats import norm, skew, skewtest
 from sklearn.metrics import confusion_matrix
+from sklearn.utils import resample
 
 def odds_ratio_from_DF(df, treatment, diagnosis):
     '''
@@ -78,8 +79,6 @@ def compute_empirical_ci(X: np.array, pivot:np.array=None, alpha:float=0.05, typ
         else:
             raise ValueError (f'{type} is not a valid confidence interval type.')
         
-        
-
 def overlap_CI(CI1, CI2): 
     '''
     Returns whether two confidence intervals overlap or not.
@@ -135,4 +134,80 @@ def ci_proportion(numerator, denominator,alpha):
     C = 2*(denominator+z**2)
     
     return ((A-B)/C, (A+B)/C)
+
+def bootstrap_matrix(matrix, n_bootstraps=1000, random_state=None):
+    """
+    Perform bootstrap sampling on matrix rows and stack results along a third axis
+    to form the resulting matrix
+    
+    Parameters:
+    -----------
+    matrix : numpy.ndarray
+        Input matrix to be bootstrapped
+    n_bootstraps : int, optional (default=1000)
+        Number of bootstrap samples to generate
+    random_state : int, optional
+        Seed for reproducibility
+    
+    Returns:
+    --------
+    numpy.ndarray
+        Bootstrapped matrices stacked along a new third axis
+    """
+    # Create an array to hold bootstrapped samples
+    bootstrapped_matrices = np.zeros((*matrix.shape, n_bootstraps), 
+                                     dtype=matrix.dtype)
+    
+    # Perform bootstrap sampling
+    for i in range(n_bootstraps):
+        # Resample rows with replacement
+        bootstrapped_matrices[:,:,i] = resample(matrix, 
+                                            replace=True, 
+                                            n_samples=matrix.shape[0],
+                                            random_state=random_state)
+    
+    return bootstrapped_matrices
+
+def compute_skewness(X:np.array, indices:np.array=slice(None), significant_filter:bool=True, alpha:float=0.05):
+    '''
+    Compute adjusted (bias corrected) Fisher-Pearson's coefficients of skewness in a data matrix.
+    This function assumes that the rows of X are instances and columns are variables.
+    It computes skewness on the rows of X indicated by the array `indices` for each column. 
+    By default it computes it over the full matrix X.
+    
+    Args:
+     - X (numpy.array): Data matris of shape n_instances * p_dimensions.
+     - indices (numpy.array): Row indices across which to compute skewness.
+     - significant_filter (bool): Whether or not replace by zero skeness values
+        that are not statistically different from zero (normal distribution 
+        skewness). (Default: True)
+     - alpha (float): two-sided test significance level (Default: 0.05) 
+         
+    
+    Output:
+     - skewness_coefficients of shape (p_dimensions,)
+     
+     '''
+    assert len(X.shape)==2, 'Input array X must be 2-dimensional.'
+    
+    fp_coeff = skew(
+        a = X[indices, :],
+        nan_policy='omit',
+        bias=False,
+        keepdims=False,
+        axis=0
+        )
+    
+    if significant_filter:
+        pvalues =  skewtest(
+            a = X,
+            axis=0,
+            nan_policy='omit',
+            alternative='two-sided',
+            keepdims=False
+            )[1]
+        
+        fp_coeff = [val if (pvalues[i]>=alpha) else 0 for i, val in enumerate(fp_coeff)]
+    
+    return fp_coeff
 
