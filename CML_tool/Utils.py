@@ -38,7 +38,7 @@ def write_pickle(object, path, filename):
                     pickle.dump(chunk, file)
         else:
             raise ValueError(
-                "File couldn't be pickle directly and neither in chunks (DataFrame). Revise the write_pickle fucntion for your current use.")        
+                "File couldn't be pickle directly and neither in chunks (DataFrame). Revise the write_pickle function for your current use.")        
         
 def read_pickle(path, filename, chunk_size=1024, silent=True):
     if not filename.endswith(".pkl"):
