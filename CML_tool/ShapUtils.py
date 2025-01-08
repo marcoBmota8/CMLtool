@@ -10,7 +10,7 @@ from shap.maskers import Independent, Partition
 from shap.explainers import Linear, Exact, Tree, GPUTree
 from shap.links import logit, identity
 
-from CML_tool.ML_Utils import compute_empirical_ci
+from CML_tool.ML_Utils import compute_empirical_ci, bootstrap_matrix
 
 
 # %% 
@@ -250,6 +250,7 @@ def CI_shap(
         background_data,
         training_outcome,
         test_data,
+        test_outcomes,
         randomness_distortion="bootstrapping_test_set",
         n_jobs = 1,
         MC_repeats = 1000,
@@ -261,7 +262,8 @@ def CI_shap(
         max_samples = 1000,
         ci_type=None,
         return_samples=False,
-        return_mav=True
+        return_mav=True,
+        
         ):
     '''
     Compute empirical variability and confidence intervals of Shapley values. 
@@ -275,6 +277,7 @@ def CI_shap(
             interventional). -> numpy.array 
         -training_outcome: labels or target values for the training instances. -> numpy.array
         -test_data: Data for which predictions shapley values are calculated. -> numpy.array
+        -test_outcome: labels or target values for the test instances. -> numpy.array
         - randomness_distortion: Whether to compute CIs based on boostrapped samples of the training data ("bootstrapping_train_data"),
             different randon seeds of the model during training on the full datatset ("seeds"),
             or bootstrapped reapeats of the test set ("bootstrapping_test_set")-> str (Default:"bootstrapping_test_set")
@@ -295,8 +298,7 @@ def CI_shap(
         -max_samples: The maximum number of samples to use from the passed background data in the independent masker. (Default:1000) -> int
         -ci_type: What confidence interval to compute from the empirical distribution: `pivot` or `quantile` based. Default is to not return neither (Default: None)
         -return_samples: Whether or not to return the full samples matrix.(Default: False).
-        -return_mav: Whather or not to return mean absolute value shap values across the set instances (e.g. patients).
-            It also returns a list with the sign of the mean across instances and across repetitions for each feature (Default: True)
+        -return_mav: Whather or not to return mean absolute value shap values across the set instances, e.g. patients. (Default: True)
         
     -Returns:
         - point estimate (np.array): mean SHAP values for each feature.
@@ -311,8 +313,23 @@ def CI_shap(
     assert isinstance(background_data, np.ndarray), '`background_data` must be a numpy array.'
     assert isinstance(training_outcome, np.ndarray), '`training_outcome` must be a numpy array.'
     assert isinstance(test_data, np.ndarray), '`test_data` must be a numpy array.'
+    
+    assert np.array_equal(test_outcomes, test_outcomes.astype(bool).astype(float)), '`test_outcomes` array is not binary.'
 
-
+    if (ci_type is not None) or (randomness_distortion == 'bootstrapping_test_set'):
+        # Calculate point estimates Shapley values on test data
+        point_estimates = calculate_shap_values(
+                model = model,
+                background_data = background_data,
+                training_outcome = training_outcome,
+                pretrained=False,
+                test_data=test_data,
+                explainer_type=explainer_type,
+                link_function=link_function,
+                feature_perturbation=feature_perturbation,
+                n_samples=n_samples,
+                max_samples=max_samples
+                )
     
     if randomness_distortion == 'train_data_bootstrapping':
         # Estimate confidence intervals through Monte Carlo sampling via bootstrapped samples of the training dataset
@@ -331,6 +348,8 @@ def CI_shap(
                 np.random.choice(background_data.shape[0], size=background_data.shape[0], replace=True) for _ in range(MC_repeats)
                 ])
             )
+        # Transform samples into an array
+        shap_values_samples = np.stack(shap_values_samples, axis=-1)
         
     elif randomness_distortion == 'seeds':
         shap_values_samples = Parallel(n_jobs=n_jobs)(delayed(calculate_shap_values)(
@@ -346,60 +365,42 @@ def CI_shap(
             max_samples=max_samples
             ) for seed in tqdm(np.random.choice(range(MC_repeats), size=MC_repeats, replace=False))
             )
+        # Transform samples into an array
+        shap_values_samples = np.stack(shap_values_samples, axis=-1)
         
     elif randomness_distortion == 'bootstrapping_test_set':
-        shap_values_samples = Parallel(n_jobs=n_jobs)(delayed(calculate_shap_values)(
-            model = model,
-            background_data = background_data,
-            training_outcome = training_outcome,
-            pretrained=False,
-            test_data=test_data[idx,:],
-            explainer_type=explainer_type,
-            link_function=link_function,
-            feature_perturbation=feature_perturbation,
-            n_samples=n_samples,
-            max_samples=max_samples
-            ) for idx in tqdm([
-                np.random.choice(test_data.shape[0], size=test_data.shape[0], replace=True) for _ in range(MC_repeats)
-                ])
-            )
+        shap_values_samples = bootstrap_matrix(
+            matrix=point_estimates,
+            n_bootstraps=MC_repeats,
+            random_state=None)
     
     else:
         raise ValueError(f"`{randomness_distortion}` is not a supported option as `randomness_distortion` input.")
-
+    
     if ci_type is not None:
-        # Calculate point estimates Shapley values
-        point_estimates = calculate_shap_values(
-                model = model,
-                background_data = background_data,
-                training_outcome = training_outcome,
-                pretrained=False,
-                test_data=test_data,
-                explainer_type=explainer_type,
-                link_function=link_function,
-                feature_perturbation=feature_perturbation,
-                n_samples=n_samples,
-                max_samples=max_samples
-                )
-        
+        # Compute confidence intervals bounds 
         lower_bounds, upper_bounds = zip(*compute_empirical_ci(
             X=shap_values_samples,
             pivot=point_estimates, # Only used when ci_type='pivot'
             alpha=alpha,
             type=ci_type
         ))
-    
-    # Transform into an array
-    shap_values_samples = np.stack(shap_values_samples, axis=-1)
-    
+
     if return_mav:
-        return np.mean(abs(shap_values_samples), axis=0).T, np.sign(np.mean(np.mean(shap_values_samples, axis=0), axis=1))
+        return {
+            'point_estimates' : point_estimates,
+            'shaps': np.mean(abs(shap_values_samples), axis=0).T
+        }
     elif return_samples:
         if ci_type is None:
             return shap_values_samples
         else: 
-            return shap_values_samples, point_estimates, np.array(lower_bounds), np.array(upper_bounds)
+            return {
+                'shaps_samples':shap_values_samples,
+                'shaps_point_estimates':point_estimates,
+                'ci_lower_bounds':np.array(lower_bounds),
+                'ci_upper_bounds':np.array(upper_bounds)
+                }
     else:
         logging.info('Neither Shapley sampels matrix nor mean absoliute values were requested. Thus defaulting to returning the full samples matrix...')
         return shap_values_samples
-# %%
