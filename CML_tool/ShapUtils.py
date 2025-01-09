@@ -393,7 +393,10 @@ def CI_shap(
         }
     elif return_samples:
         if ci_type is None:
-            return shap_values_samples
+            return {
+            'shap_samples': shap_values_samples,
+            'point_estimates': point_estimates
+        }
         else: 
             return {
                 'shaps_samples':shap_values_samples,
@@ -402,5 +405,8 @@ def CI_shap(
                 'ci_upper_bounds':np.array(upper_bounds)
                 }
     else:
-        logging.info('Neither Shapley sampels matrix nor mean absoliute values were requested. Thus defaulting to returning the full samples matrix...')
-        return shap_values_samples
+        logging.info('Neither Shapley sampels matrix nor mean absoliute values were requested. Thus defaulting to returning the full samples matrix and point estimates...')
+        return {
+            'shap_samples': shap_values_samples,
+            'point_estimates': point_estimates
+        }
