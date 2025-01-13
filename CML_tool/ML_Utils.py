@@ -3,6 +3,7 @@ import numpy as np
 from scipy.stats import norm, skew, skewtest
 from sklearn.metrics import confusion_matrix
 from sklearn.utils import resample
+from sklearn.neighbors import KernelDensity 
 
 def odds_ratio_from_DF(df, treatment, diagnosis):
     '''
@@ -211,3 +212,12 @@ def compute_skewness(X:np.array, indices:np.array=slice(None), significant_filte
     
     return fp_coeff
 
+def compute_1dkde_curve(x, x_grid, bandwidth, kernel='gaussian'):
+    
+    assert x_grid.shape[1] == 1, f"Wrong `x_grid` shape, got {x_grid.shape}"    
+    assert x.shape[1] == 1, f"Wrong `x` shape, got {x.shape}"    
+    
+    kde = KernelDensity(kernel=kernel, bandwidth=bandwidth)
+    kde.fit(x)
+    logprob = kde.score_samples(x_grid)
+    return np.exp(logprob)
