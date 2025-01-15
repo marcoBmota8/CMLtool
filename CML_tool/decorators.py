@@ -3,6 +3,7 @@ import logging
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 import json
 import pickle
 
@@ -10,6 +11,10 @@ from CML_tool.Utils import write_pickle, read_pickle
 
 # Configure the logging module
 logging.basicConfig(level=logging.INFO)
+
+#######################
+##### Decorators ######
+#######################
 
 def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str='.pkl'):
     """
@@ -183,3 +188,18 @@ def file_based_fig_ax_objects(filename:str=None, path:str=None):
                 return fig, ax
         return wrapper
     return decorator
+
+
+#######################
+######## Utils ########
+#######################
+
+def gen_plot_from_fn(fn, **kwargs):
+    result = fn(**kwargs)
+    try: # in case the function returns an axis
+        return result.get_figure()
+    except: 
+        if isinstance(result, plt.figure):
+            return result
+        else:
+            raise TypeError('The inputted function does not retrieve neither a matplotlib axis nor a figure object.')
