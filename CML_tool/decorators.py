@@ -3,9 +3,10 @@ import logging
 
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import json
 import pickle
+
+from matplotlib.figure import Figure
 
 from CML_tool.Utils import write_pickle, read_pickle
 
@@ -199,7 +200,7 @@ def gen_plot_from_fn(fn, **kwargs):
     try: # in case the function returns an axis
         return result.get_figure()
     except: 
-        if isinstance(result, plt.figure):
+        if isinstance(result, Figure):
             return result
         else:
             raise TypeError('The inputted function does not retrieve neither a matplotlib axis nor a figure object.')
