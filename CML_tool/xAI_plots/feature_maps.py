@@ -6,7 +6,7 @@ SLE_2021 = {
         "S-1588": "SLE w/ high DNA double strand Ab",
         "S-1683": "Toxic maculopathy coded in autoimmune patients",
         "S-1378": "Cardiolipin IgG \& IgM Ab", 
-        "S-999" : "Elevated $\beta-2$ \& cadiolipin IgG Ab",
+        "S-999" : r"Elevated $\beta-2$ \& cadiolipin IgG Ab",
         "S-1581": "SLE treated w/ HCQ",
         "S-295" : "General injuries",
         "S-788" : "Rheumatoid arthritis",
@@ -37,7 +37,7 @@ SLE_2021 = {
         "S-373" : "Cervical radiculopathy",
         "S-563" : "Elevated IgG, IgA, and erythrocyte sedimentation rate",
         "S-1252" : "Tinea corporis", # Speculation is misDx of some cutaneous lupus
-        "S-1192" : "Elevated $\beta-2$ \& cadiolipin IgM Ab",
+        "S-1192" : r"Elevated $\beta-2$ \& cadiolipin IgM Ab",
         "S-717" : "Antiphospholipid syndrome",
         "S-1576" : "Systemic sclerosis",# SS was a Dx excluded from the definitins of SLE and still predictive
         "S-1300" : "Elevated specific gravity \& pH of Urine", # Is usually not looked at, unremarkable
