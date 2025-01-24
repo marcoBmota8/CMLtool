@@ -43,36 +43,36 @@ SLE_2021 = {
         "S-1300" : "Elevated specific gravity \& pH of Urine", # Is usually not looked at, unremarkable
         "S-766" : "Diazepan treatment",
         "S-100" : "Late-stage pregnancy complication",
-        "S-1853" : "Benign prostatic hyperplasia w/ outflow obstruction", # check
+        "S-1853" : "Benign prostatic hypertrophy w/ outflow obstruction tendency",
         "S-288" : "Specific visual field defect", # Complicated, might be from the eye exam 
         "S-1738" : "Alopecia, female tendency",
         "S-1717" : "Hematuria",
         "S-1924" : "Elevated Antithrombin in blood coagulation disorder", 
         "S-657" : "Mycophenolate mofetil in kidney transplant",
         "S-1678" : "Undifferentiated connective tissue disease",
-        "S-510" : "Refractive errors \& cataracts", # check
+        "S-510" : "Age-related vision deterioration", 
         "S-813" : "Elevated CSF IgG Ab from blood-brain barrier impairment", # Ask Mike and Vivian / Lupus cerebritis among other things such as MS
         "S-658" : "Diplopia",
-        "S-1238" : "Elevated immature granulocytes", # check
+        "S-1238" : "Elevated immature granulocytes",
         "S-1494" : "Sjögren's syndrome",
         "S-539" : "Elevated nuclear anti-SCL-70 Ab", 
         "S-827" : "Elevated anti-Smith Ab", 
         "S-316" : "$\mathrm{FeSO_4}$ supplementation in anemia",
         "S-1348" : "Advanced (stage 3) CKD", # check (ask mike) 
-        "S-1371" : "Secondary osteoarthritis", # check
+        "S-1371" : "Non-ideopathic degenerative joint disease",
         "S-1413" : "Dermatomyositis", #-> Excluded in SLE definition so partial matches only 
         "S-1682" : "Elevated SS-A/Ro \& SS-B/La Ab", 
-        "S-1062" : "Lumbar spondylosis",
+        "S-1062" : "Low back spondylosis",
         "S-735" : "Elevated creatinine in urine",
         "S-237" : "Pain in right knee", 
-        "S-473" : "High ANA billing code", # check -> Why is there a code for this???
+        "S-473" : "Coded high antibodies finding", 
         "S-559" : "Elevated thyroglobulin", 
         "S-980" : "Gabapentin treatment", 
         "S-1936" : "Difficulty walking from lower body weakness", 
-        "S-551" : "Elevated ANA titer result", # check Difference with S-473
+        "S-551" : "Elevated ANA titer LAB result",
         "S-448" : "Contact dermatitis",
         "S-1279" : "Elevated erythrocyte sedimentation rate",
-        "S-770" : "Elevated metamyelocytes", # Indicate inflamation
+        "S-770" : "Elevated metamyelocytes in CSF", # Indicate inflamation
         "S-1808": "Wrist joint pain",
         "S-069": "Sleep apnea",
         "S-384": "Skin sensation disturbance",
@@ -82,7 +82,7 @@ SLE_2021 = {
         "S-1737": "Bee/wasp bite reactions",
         "S-1194": "Treatment w/ diphenhydramine",
         "S-517": "CABG to treat coronary arteriosclerosis",
-        "S-986" : "Benign prostatic hypertrophy w/o outflow obstruction",
+        "S-986" : "Benign prostatic hypertrophy w/o outflow obstruction tendency",
         "S-1498" : "Closed rib(s) fracture"
         },
 
