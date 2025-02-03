@@ -51,7 +51,7 @@ SLE_2021 = {
         "S-657" : "Mycophenolate mofetil in kidney transplant",
         "S-1678" : "Undifferentiated connective tissue disease",
         "S-510" : "Age-related vision deterioration", 
-        "S-813" : "Elevated CSF IgG Ab from blood-brain barrier impairment", # Ask Mike and Vivian / Lupus cerebritis among other things such as MS
+        "S-813" : "Elevated CSF albumin and IgG",
         "S-658" : "Diplopia",
         "S-1238" : "Elevated immature granulocytes",
         "S-1494" : "Sjögren's syndrome",
@@ -65,11 +65,11 @@ SLE_2021 = {
         "S-1062" : "Low back spondylosis",
         "S-735" : "Elevated creatinine in urine",
         "S-237" : "Pain in right knee", 
-        "S-473" : "Coded high antibodies finding", 
+        "S-473" : "Coded high antibody titer w/ osteoarthritis", 
         "S-559" : "Elevated thyroglobulin", 
         "S-980" : "Gabapentin treatment", 
         "S-1936" : "Difficulty walking from lower body weakness", 
-        "S-551" : "Elevated ANA titer LAB result",
+        "S-551" : "Elevated ANA titer lab result",
         "S-448" : "Contact dermatitis",
         "S-1279" : "Elevated erythrocyte sedimentation rate",
         "S-770" : "Elevated metamyelocytes in CSF", # Indicate inflamation
@@ -102,18 +102,17 @@ SLE_2021 = {
     }
 }
 
+ # %%
+from CML_tool.Utils import look_up_description
+from CML_tool.Utils import read_pickle
 
-# # %%
-# from CML_tool.Utils import look_up_description
-# from CML_tool.Utils import read_pickle
 
+meta_df = read_pickle('/home/barbem4/projects/Data/Initial Data' , 'meta.pkl')
 
-# meta_df = read_pickle('/home/barbem4/projects/Data/Initial Data' , 'meta.pkl')
-
-# # %%
-# df = look_up_description(
-#     meta_df,
-#     description='Benign prostatic hypertrophy with'
-#     )
-# df.description.item()
+# %%
+df = look_up_description(
+    meta_df,
+    description='Degenerative joint disease involving'
+    )
+df.description.item()
 # %%
