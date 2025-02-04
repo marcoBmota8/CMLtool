@@ -26,14 +26,17 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
         npoints=int(xmax/bandwidth)
     
     shap_means = np.mean(shaps, axis=0) # Mean shap value for each feature
-    top=np.minimum(top, np.argwhere(np.sort(abs(shap_means))[::-1]>=min_shap).flatten()[-1])
+    try:
+        top=np.minimum(top, np.argwhere(np.sort(abs(shap_means))[::-1]>=min_shap).flatten()[-1]) 
+    except:
+        pass
     top=np.maximum(top,10) # ensure minimum 10 features
     top_idx = list(np.argsort(abs(shap_means))[::-1][:top]) # The indices for the top features based on absolute mean shapley value
     
     X_top = shaps[:,top_idx].T # Shap values for the top features
 
     if data_rep.lower() == 'signatures':
-        labels = [f'[{x}]: '+features_name_map.get(x, 'Unknown') for x in all_features_names[top_idx]]
+        labels = [f'[{x}]:'+features_name_map.get(x, 'Unknown') for x in all_features_names[top_idx]]
     elif data_rep.lower() == 'channels':
         # Returns strings with replacements according to the mapping otherwise retunrs original (map input string)
         labels = [reduce(lambda x, kv: x.replace(*kv), features_name_map.items(), label) for label in all_features_names[top_idx]]
@@ -43,7 +46,7 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
     # Add signs if provided
     if signs is not None:
         signs_labels = ['+' if s > 0 else '--' if s < 0 else '0' for s in signs[top_idx]] # Whether the mean shap across patients is protective or inducive
-        labels = [l+ ' ' + '(' + signs_labels[i] + ')' for i,l in enumerate(labels)]
+        labels = [l+' (' + signs_labels[i] + ')' for i,l in enumerate(labels)]
         
     fig = plt.figure(figsize=figsize)
     gs = fig.add_gridspec(nrows=top, ncols=1)
@@ -90,11 +93,12 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
             ax.set_xlabel(r'Mean Absolute Shapley Value', fontsize=fontsize)
             ax.tick_params(axis="x", which="both", top=False, labelsize=fontsize)
 
-        ax.text(0.0, 1.0, labels[i],
+        ax.text(-0.025,0.1, labels[i],
                 horizontalalignment='right',
                 verticalalignment='center',
-                fontsize=fontsize)
-
+                fontsize=fontsize,
+                transform=ax.transAxes)
+        
     ymin = np.inf
     ymax = -np.inf
     for ax in axes:
@@ -116,10 +120,11 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
     
 def plot_comparing_shap_ridgelines(shaps_ref, shaps_comp, data_rep, all_features_names, features_name_map, 
                                    title, xmax, bandwidth, label_ref, label_comp,
+                                   features_chars=None,
                                    return_all=False,
                                    order:list=None, npoints=None, top:int=10, min_shap:float=1e-5, overlap: float=0.5,
                                    figsize:tuple=(4,2), fontsize:float=12, 
-                                   color_kde_ref='royalblue', color_rug_ref='slateblue', color_kde_comp='darkviolet', color_rug_comp='mediumorchid'):
+                                   color_kde_ref='royalblue', color_rugs_ref='slateblue', color_kde_comp='darkviolet', color_rugs_comp='mediumorchid'):
     
     '''
     This function plots ridgeline plots for the same variables for two datasets.
@@ -137,7 +142,8 @@ def plot_comparing_shap_ridgelines(shaps_ref, shaps_comp, data_rep, all_features
     assert (isinstance(shaps_ref, np.ndarray) & isinstance(shaps_comp, np.ndarray)), "shapley values array must be a NumPy array."    
     assert ((shaps_ref.ndim == 2) & (shaps_comp.ndim == 2)), "Shapley values array must be a 2D array."
     assert isinstance(all_features_names, np.ndarray), "`all_features_names` must be a NumPy array or list of strings."
-    assert isinstance(order, list) or order==None, 'The order indices `order` must be a list of integers. Probably an array was passed.'
+    assert np.shape(all_features_names)==np.shape(features_chars) or features_chars is None, f"`all_features_names` and `features_chars` must have the same shape. {all_features_names.shape} != {np.shape(features_chars)}"
+    assert isinstance(order, list) or order is None, 'The order indices `order` must be a list of integers. Probably an array was passed.'
     
     if npoints is None:
         npoints=int(xmax/bandwidth)
@@ -151,13 +157,16 @@ def plot_comparing_shap_ridgelines(shaps_ref, shaps_comp, data_rep, all_features
     X_top_comp = shaps_comp[:,top_idx].T # Comparison shap values for the top features
 
     if data_rep.lower() == 'signatures':
-        labels = [f'[{x}]: '+features_name_map.get(x, 'Unknown') for x in all_features_names[top_idx]]
+        labels = [f'[{x}]:'+features_name_map.get(x, 'Unknown') for x in all_features_names[top_idx]]
     elif data_rep.lower() == 'channels':
         # Returns strings with replacements according to the mapping otherwise retunrs original (map input string)
-        labels = [reduce(lambda x, kv: x.replace(*kv), features_name_map.items(), label) for label in all_features_names[top_idx]]
+        labels = [reduce(lambda x, kv: x.replace(*kv), features_name_map.items(), l) for l in all_features_names[top_idx]]
     else:
         raise ValueError(f'Data representation `{data_rep}` is not supported.')
     
+    # If passed, add feature characteristics to text labels
+    if features_chars is not None:
+        labels = [l+f' ({(np.round(c,decimals=3))})' for l,c in zip(labels, features_chars[top_idx])]
         
     fig = plt.figure(figsize=figsize)
     gs = fig.add_gridspec(nrows=top, ncols=1)
@@ -193,12 +202,12 @@ def plot_comparing_shap_ridgelines(shaps_ref, shaps_comp, data_rep, all_features
         # Plot KDE for X_top
         ax.fill_between(x_grid, curve_ref, color=color_kde_ref, alpha=0.25, linewidth=0)
         ax.plot(x_grid, curve_ref, color=color_kde_ref, linewidth=1.0, alpha=0.75, label=label_ref)
-        ax.scatter(row_ref, np.zeros(len(row_ref)), marker=3, color=color_rug_ref, alpha=0.15)
+        ax.scatter(row_ref, np.zeros(len(row_ref)), marker=3, color=color_rugs_ref, alpha=0.15)
         
         # Plot KDE for X_comp
         ax.fill_between(x_grid, curve_comp, color=color_kde_comp, alpha=0.25, linewidth=0)
         ax.plot(x_grid, curve_comp, color=color_kde_comp, linewidth=1.0, alpha=0.75, label=label_comp)
-        ax.scatter(row_comp, np.zeros(len(row_comp)), marker=3, color=color_rug_comp, alpha=0.15)
+        ax.scatter(row_comp, np.zeros(len(row_comp)), marker=3, color=color_rugs_comp, alpha=0.15)
         
         # Rest of the formatting remains the same
         ax.set_xlim(0.0, xmax)
@@ -219,13 +228,13 @@ def plot_comparing_shap_ridgelines(shaps_ref, shaps_comp, data_rep, all_features
             ax.tick_params(axis="x", which="both", top=False, labelsize=fontsize)
             
         if i == 0:
-            ax.legend()
+            ax.legend(prop=dict(size=fontsize))
         
-        ax.text(0.0, 1.0, labels[i],
+        ax.text(-0.025,0.1, labels[i],
                 horizontalalignment='right',
                 verticalalignment='center',
-                fontsize=fontsize)
-
+                fontsize=fontsize,
+                transform=ax.transAxes)
 
     ymin = np.inf
     ymax = -np.inf
