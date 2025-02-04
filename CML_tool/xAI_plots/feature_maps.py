@@ -5,14 +5,14 @@ SLE_2021 = {
         "S-1497": "Lupus nephritis w/ glomerunephritis", 
         "S-1588": "SLE w/ high DNA double strand Ab",
         "S-1683": "Toxic maculopathy coded in autoimmune patients",
-        "S-1378": "Cardiolipin IgG \& IgM Ab", 
-        "S-999" : r"Elevated $\beta-2$ \& cadiolipin IgG Ab",
+        "S-1378": "Anti-cardiolipin IgG \& IgM Ab", 
+        "S-999" : r"Elevated anti-$\beta$2 \& anti-cardiolipin IgG Ab",
         "S-1581": "SLE treated w/ HCQ",
         "S-295" : "General injuries",
         "S-788" : "Rheumatoid arthritis",
         "S-976" : "Keratoconjunctivitis sicca in Sjögren's syndrome",
-        "S-1475": "Cardiolipin IgA \& IgG Ab", 
-        "S-063" : "Protean symptoms (allergy and pain)",
+        "S-1475": "Anti-cardiolipin IgA \& IgG Ab", 
+        "S-063" : "Protean symptoms (allergy and pain)", 
         "S-1324" : "Coronary heart disease",
         "S-1756" : "Healthcare acquired vascular infection",
         "S-926" : "Anorectal benign tumor",
@@ -37,7 +37,7 @@ SLE_2021 = {
         "S-373" : "Cervical radiculopathy",
         "S-563" : "Elevated IgG, IgA, and erythrocyte sedimentation rate",
         "S-1252" : "Tinea corporis", # Speculation is misDx of some cutaneous lupus
-        "S-1192" : r"Elevated $\beta-2$ \& cadiolipin IgM Ab",
+        "S-1192" : r"Elevated anti-$\beta$2 \& anti-cardiolipin IgM Ab",
         "S-717" : "Antiphospholipid syndrome",
         "S-1576" : "Systemic sclerosis",# SS was a Dx excluded from the definitins of SLE and still predictive
         "S-1300" : "Elevated specific gravity \& pH of Urine", # Is usually not looked at, unremarkable
@@ -83,7 +83,9 @@ SLE_2021 = {
         "S-1194": "Treatment w/ diphenhydramine",
         "S-517": "CABG to treat coronary arteriosclerosis",
         "S-986" : "Benign prostatic hypertrophy w/o outflow obstruction tendency",
-        "S-1498" : "Closed rib(s) fracture"
+        "S-1498" : "Closed rib(s) fracture",
+        "S-1793" : "Blood coagulation disorder w/ elevated lupus anticoagulant Ab",
+        "S-1385" : "Degenerative joint disease in lower extremeties"
         },
 
     'CHANNELS_MAP' : { # Mapping to for better strigns for each feature
@@ -102,17 +104,17 @@ SLE_2021 = {
     }
 }
 
- # %%
-from CML_tool.Utils import look_up_description
-from CML_tool.Utils import read_pickle
+#  # %%
+# from CML_tool.Utils import look_up_description
+# from CML_tool.Utils import read_pickle
 
 
-meta_df = read_pickle('/home/barbem4/projects/Data/Initial Data' , 'meta.pkl')
+# meta_df = read_pickle('/home/barbem4/projects/Data/Initial Data' , 'meta.pkl')
 
-# %%
-df = look_up_description(
-    meta_df,
-    description='Degenerative joint disease involving'
-    )
-df.description.item()
+# # %%
+# df = look_up_description(
+#     meta_df,
+#     description='Degenerative joint disease involving'
+#     )
+# df.description.item()
 # %%
