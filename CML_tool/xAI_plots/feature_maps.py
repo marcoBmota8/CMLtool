@@ -41,7 +41,7 @@ SLE_2021 = {
         "S-717" : "Antiphospholipid syndrome",
         "S-1576" : "Systemic sclerosis",# SS was a Dx excluded from the definitins of SLE and still predictive
         "S-1300" : "Elevated specific gravity \& pH of Urine", # Is usually not looked at, unremarkable
-        "S-766" : "Diazepan treatment",
+        "S-766" : "Diazepam treatment",
         "S-100" : "Late-stage pregnancy complication",
         "S-1853" : "Benign prostatic hypertrophy w/ outflow obstruction tendency",
         "S-288" : "Specific visual field defect", # Complicated, might be from the eye exam 
@@ -85,7 +85,22 @@ SLE_2021 = {
         "S-986" : "Benign prostatic hypertrophy w/o outflow obstruction tendency",
         "S-1498" : "Closed rib(s) fracture",
         "S-1793" : "Blood coagulation disorder w/ elevated lupus anticoagulant Ab",
-        "S-1385" : "Degenerative joint disease in lower extremeties"
+        "S-1385" : "Degenerative joint disease in lower extremeties",
+        "S-476" : "Male decreased libido from allergic rhinitis sleep deprivation",
+        "S-001" : "Age-related macular degeneration",
+        "S-1815" : "Citalopram treatment",
+        "S-1599" : "Hydroxyzine treatment for inflammatory dermatosis",
+        "S-1549" : "Inflammatory dermatosis",
+        "S-1021" : "Coded proteinuria",
+        "S-556" : "Intervertebral disk degeneration",
+        "S-1167": "Myogenic ptosis",
+        "S-771" : "Personality disorder",
+        "S-1975" : "Pneumococcal pneumonia in multiple myeloma",
+        "S-114" : "Neurosis",
+        "S-1172" : "Pain in right foot",
+        "S-1226": "Transient cerebral ischemia from aneurysm",
+        "S-1100": "Clonazepan treatment",
+        "S-1592": "Idiopathic peripheral neuropathy"
         },
 
     'CHANNELS_MAP' : { # Mapping to for better strigns for each feature
