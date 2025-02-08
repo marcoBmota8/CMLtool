@@ -149,9 +149,12 @@ def plot_comparing_shap_ridgelines(shaps_ref, shaps_comp, data_rep, all_features
         npoints=int(xmax/bandwidth)
     
     shap_means = np.mean(shaps_ref, axis=0) # Mean shap value for each feature in the reference dataset
-    top=np.minimum(top, np.argwhere(np.sort(shap_means)[::-1]>=min_shap).flatten()[-1])
+    try:
+        top=np.minimum(top, np.argwhere(np.sort(abs(shap_means))[::-1]>=min_shap).flatten()[-1]) 
+    except:
+        pass
     top=np.maximum(top,10) # ensure minimum 10 features
-    top_idx = list(np.argsort(shap_means)[::-1][:top]) if order is None else order[:top] # The indices for the top features based on absolute mean shapley value
+    top_idx = list(np.argsort(abs(shap_means))[::-1][:top]) if order is None else order[:top] # The indices for the top features based on absolute mean shapley value
     
     X_top_ref = shaps_ref[:,top_idx].T # Reference shap values for the top features
     X_top_comp = shaps_comp[:,top_idx].T # Comparison shap values for the top features
