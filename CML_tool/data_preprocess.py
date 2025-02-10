@@ -54,14 +54,16 @@ class GelmanScaler:
         return [i for i in range(data.shape[1]) if set(np.unique(data[:,i])).issubset({0.0,1.0}) or set(np.unique(data[:,i])).issubset({True,False})]
         
     def fit(self, X, log_indices:list):
-        # Correct DataFrames dtype to perform operations with float Series
-        if isinstance(X, pd.DataFrame):
-            X = X.applymap(float)
-            if all(isinstance(item, str) for item in log_indices):
-                log_indices = [np.argwhere(X.columns==col).item() for col in log_indices]
         self._log_indices=log_indices
         if self.log_indices_ is not None:
-            X[:,self.log_indices_] = np.log10(X[:, self.log_indices_]+self.eps_)
+       
+            if isinstance(X, pd.DataFrame):
+                X = X.applymap(float)  # Correct DataFrames dtype to perform operations with float Series
+                X.loc[:,self.log_indices_] = np.log10(X.loc[:, self.log_indices_]+self.eps_)
+            elif isinstance(X, np.ndarray):
+                X[:,self.log_indices_] = np.log10(X[:, self.log_indices_]+self.eps_)
+            else:
+                raise ValueError('Unsuported input matrix data type.')
         self._mean = np.mean(X, axis=0)
         self._stdev = np.std(X, axis=0)
         self._constant_indices = np.where(self._stdev < self.eps_)[0]
