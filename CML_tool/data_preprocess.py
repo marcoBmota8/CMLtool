@@ -57,6 +57,8 @@ class GelmanScaler:
         # Correct DataFrames dtype to perform operations with float Series
         if isinstance(X, pd.DataFrame):
             X = X.applymap(float)
+            if all(isinstance(item, str) for item in log_indices):
+                log_indices = [np.argwhere(X.columns==col).item() for col in log_indices]
         self._log_indices=log_indices
         if self.log_indices_ is not None:
             X[:,self.log_indices_] = np.log10(X[:, self.log_indices_]+self.eps_)
