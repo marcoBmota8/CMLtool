@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 ##### Decorators ######
 #######################
 
-def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str='.pkl'):
+def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str='.pkl', cached_flag=True):
     """
     File based cacheing with support for multiple formats including NPZ. For several arrays as NPZ
     it returns a dictionary with the key:array pairs and a boolean indicating whether the decorated function
@@ -45,6 +45,8 @@ def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str=
         path (str): Directory path for caching
         filename (str): Name of the cache file
         extension_desired (str): File extension ('.pkl', '.csv', '.json', '.npy', '.npz')
+        cached_flag (bool): Whether or not to return a flag indicating if the decorated function output object
+                            was cached or not. (Default: True)
     """
     def decorator(func):
         def wrapper(*args, **kwargs):
@@ -127,9 +129,10 @@ def file_based_cacheing(path:str=None, filename:str=None, extension_desired:str=
                         write_pickle(object = obj_var, path=path_fn, filename=filename_fn+'.pkl')
 
                     logging.info(msg = "Function "+func.__name__+" EXECUTION COMPLETE & RESULT FILE SAVED.")
-                    
-                return obj_var, cached
-            
+                if cached_flag:
+                    return obj_var, cached
+                else:
+                    return obj_var
             else:
                 raise ValueError(f'Either "path", "filename" arguments were not passed to the decorator or instance of the function {func.__name__}.')
 
