@@ -161,7 +161,6 @@ def save_figure_wrapper(fig:plt.figure, **kwargs):
 
     Args:
         fig (plt.figure): The figure to be saved.
-        ax (plt.axis): The axis object associated with the figure.
     
     NOTE:Required kwargs:
         filename (str): The name of the file to save the figure as.
@@ -170,7 +169,6 @@ def save_figure_wrapper(fig:plt.figure, **kwargs):
 
     Returns:
         fig (plt.figure): The saved figure.
-        ax (plt.axis): The saved axis object.
     '''
     return fig
         
