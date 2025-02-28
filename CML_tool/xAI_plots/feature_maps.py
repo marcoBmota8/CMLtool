@@ -47,7 +47,7 @@ SLE_2021 = {
         "S-288" : "Specific visual field defect", # Complicated, might be from the eye exam 
         "S-1738" : "Alopecia, female tendency",
         "S-1717" : "Hematuria",
-        "S-1924" : "Elevated Antithrombin in blood coagulation disorder", 
+        "S-1924" : "Elevated antithrombin in renal transplant", 
         "S-657" : "Mycophenolate mofetil in kidney transplant",
         "S-1678" : "Undifferentiated connective tissue disease",
         "S-510" : "Age-related vision deterioration", 
