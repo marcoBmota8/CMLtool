@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from functools import reduce
 
 from CML_tool.ML_Utils import compute_1dkde_curve
+from CML_tool.Utils import round_up_sig_figs
 
 def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map, title, xmax, bandwidth, signs=None, npoints=None,
                          top:int=10, min_shap:float=1e-5, overlap: float=0.5, figsize:tuple=(4,2), fontsize:float=12, return_all=False, color_kde='C0', color_rugs='C1'):
@@ -257,4 +258,159 @@ def plot_comparing_shap_ridgelines(shaps_ref, shaps_comp, data_rep, all_features
         return fig, axes, curves_ref, curves_comp
     else:
         return fig                         
+
+def plot_comparing_raw_data_ridgelines(X_ref, X_comp, data_rep, all_features_names, features_name_map, 
+                                   title, bandwidth, label_ref, label_comp, zero_threshold = None,
+                                   features_chars=None,
+                                   return_all=False,
+                                   order:list=None, npoints=None, top:int=10, overlap: float=0.5,
+                                   figsize:tuple=(4,2), fontsize:float=12, x_label:str="Data",
+                                   color_kde_ref='royalblue', color_rugs_ref='slateblue', color_kde_comp='darkviolet', color_rugs_comp='mediumorchid'):
+    
+    '''
+    This function plots ridgeline plots for the same variables for two datasets.
+    The first (X_ref) is taken as reference. If no order is passed as, then its data dictates 
+    which top variables are plotted through mean sorting. if an or
+    The second (X_comp) is used to compare agains the reference.
+    The data distribution (rugplot and KDE) of both are plotted on the same axis for the same variables. 
+    
+    Important: It assumes that the dimensionality for both `X_ref` and `X_comp` are the same and are ordered in the same way.
+    '''
+
+    if isinstance(all_features_names, list):
+        all_features_names = np.array(all_features_names)
+    
+    assert (isinstance(X_ref, np.ndarray) & isinstance(X_comp, np.ndarray)), "Input data array must be a NumPy array."    
+    assert ((X_ref.ndim == 2) & (X_comp.ndim == 2)), "Data arrays must be a 2D array."
+    assert isinstance(all_features_names, np.ndarray), "`all_features_names` must be a NumPy array or list of strings."
+    assert np.shape(all_features_names)==np.shape(features_chars) or features_chars is None, f"`all_features_names` and `features_chars` must have the same shape. {all_features_names.shape} != {np.shape(features_chars)}"
+    assert isinstance(order, list) or order is None, 'The order indices `order` must be a list of integers. Probably an array was passed.'
+    
+    xmax = round_up_sig_figs(
+        number=np.maximum(
+            np.nanmax(X_ref),
+            np.nanmax(X_comp)
+            )*1.1,
+        sig_figs=2
+        )
+    
+    xmin = round_up_sig_figs(
+        number=np.minimum(
+            np.nanmin(X_ref),
+            np.nanmin(X_comp)
+            )*1.1,
+        sig_figs=2
+        )
+    
+    if npoints is None:
+        npoints=int((xmax-xmin)/bandwidth)
+    
+    top_idx = order[:top] # The indices for the top features
+    
+    X_top_ref = X_ref[:,top_idx].T # Reference data values for the top features
+    X_top_comp = X_comp[:,top_idx].T # Comparison data values for the top features
+
+    if data_rep.lower() == 'signatures':
+        labels = [f'[{x}]:'+features_name_map.get(x, 'Unknown') for x in all_features_names[top_idx]]
+    elif data_rep.lower() == 'channels':
+        # Returns strings with replacements according to the mapping otherwise retunrs original (map input string)
+        labels = [reduce(lambda x, kv: x.replace(*kv), features_name_map.items(), l) for l in all_features_names[top_idx]]
+    else:
+        raise ValueError(f'Data representation `{data_rep}` is not supported.')
+    
+    # If passed, add feature characteristics to text labels
+    if features_chars is not None:
+        labels = [l+f' ({(np.round(c,decimals=3))})' for l,c in zip(labels, features_chars[top_idx])]
         
+    fig = plt.figure(figsize=figsize)
+    gs = fig.add_gridspec(nrows=top, ncols=1)
+
+    x_grid = np.linspace(xmin, xmax, npoints)
+
+    axes = []
+    curves_ref = []
+    curves_comp = []
+
+    for i, (row_ref, row_comp) in enumerate(zip(X_top_ref, X_top_comp)):
+        
+        # Filter out values lower in absolute value
+        if zero_threshold is not None:
+            row_ref= row_ref[abs(row_ref)>zero_threshold]
+            row_comp= row_comp[abs(row_comp)>zero_threshold]
+        
+        # KDE reference
+        curve_ref = compute_1dkde_curve(
+            x=row_ref[:,None],
+            x_grid=x_grid[:,None],
+            bandwidth=bandwidth,
+            kernel='gaussian'
+        )
+        curves_ref.append(curve_ref)
+        
+        # KDE comparison
+        curve_comp = compute_1dkde_curve(
+            x=row_comp[:,None],
+            x_grid=x_grid[:,None],
+            bandwidth=bandwidth,
+            kernel='gaussian'
+        )
+        curves_comp.append(curve_comp)
+        
+        ax = fig.add_subplot(gs[i:i+1, :])
+        axes.append(ax)
+        
+        # Plot KDE for X_top
+        ax.fill_between(x_grid, curve_ref, color=color_kde_ref, alpha=0.25, linewidth=0)
+        ax.plot(x_grid, curve_ref, color=color_kde_ref, linewidth=1.0, alpha=0.75, label=label_ref)
+        ax.scatter(row_ref, np.zeros(len(row_ref)), marker=3, color=color_rugs_ref, alpha=0.15)
+        
+        # Plot KDE for X_comp
+        ax.fill_between(x_grid, curve_comp, color=color_kde_comp, alpha=0.25, linewidth=0)
+        ax.plot(x_grid, curve_comp, color=color_kde_comp, linewidth=1.0, alpha=0.75, label=label_comp)
+        ax.scatter(row_comp, np.zeros(len(row_comp)), marker=3, color=color_rugs_comp, alpha=0.15)
+        
+        # Rest of the formatting remains the same
+        ax.set_xlim(xmin, xmax)
+        ax.patch.set_alpha(0)
+        ax.spines['top'].set_visible(False)
+        ax.spines['bottom'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        
+        ax.set_yticks([])
+        ax.set_yticklabels([])
+        
+        if i + 1 < top:
+            ax.set_xticks([])
+            ax.set_xticklabels([])
+        else:
+            ax.set_xlabel(x_label, fontsize=fontsize)
+            ax.tick_params(axis="x", which="both", top=False, labelsize=fontsize)
+            
+        if i == 0:
+            ax.legend(prop=dict(size=fontsize))
+        
+        ax.text(0.0,0.05, labels[i],
+                horizontalalignment='right',
+                verticalalignment='center',
+                fontsize=fontsize,
+                transform=ax.transAxes)
+
+    ymin = np.inf
+    ymax = -np.inf
+    for ax in axes:
+        _ymin, _ymax = ax.get_ylim()
+        ymin = min(_ymin, ymin)
+        ymax = max(_ymax, ymax)
+
+    for ax in axes:
+        ax.set_ylim([ymin, ymax])
+
+    gs.update(hspace=-overlap)
+    gs.update(top=1)
+    fig.suptitle(title)
+    
+    if return_all:
+        return fig, axes, curves_ref, curves_comp
+    else:
+        return fig              
