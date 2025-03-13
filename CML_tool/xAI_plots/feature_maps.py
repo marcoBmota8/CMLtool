@@ -2,7 +2,7 @@ SLE_2021 = {
     'SIGNATURES_MAP' : {
         "S-650": "SLE w/ organ/system involvement",
         "S-1289": "High intensity SLE code",
-        "S-1497": "Lupus nephritis w/ glomerunephritis", 
+        "S-1497": "Lupus nephritis", 
         "S-1588": "SLE w/ high DNA double strand Ab",
         "S-1683": "Toxic maculopathy coded in autoimmune patients",
         "S-1378": "Elevated anti-cardiolipin IgG \& IgM Ab", 
@@ -38,7 +38,7 @@ SLE_2021 = {
         "S-563" : "Elevated IgG, IgA, and erythrocyte sedimentation rate",
         "S-1252" : "Tinea corporis", # Speculation is misDx of some cutaneous lupus
         "S-1192" : r"Elevated anti-$\beta$2 \& anti-cardiolipin IgM Ab",
-        "S-717" : "Antiphospholipid syndrome",
+        "S-717" : "Coded antiphospholipid syndrome",
         "S-1576" : "Systemic sclerosis",# SS was a Dx excluded from the definitins of SLE and still predictive
         "S-1300" : "Elevated specific gravity \& pH of Urine", # Is usually not looked at, unremarkable
         "S-766" : "Diazepam treatment",
@@ -48,7 +48,7 @@ SLE_2021 = {
         "S-1738" : "Alopecia, female tendency",
         "S-1717" : "Hematuria",
         "S-1924" : "Elevated antithrombin in renal transplant", 
-        "S-657" : "Mycophenolate mofetil in kidney transplant",
+        "S-657" : "Mycophenolate mofetil treatment",
         "S-1678" : "Undifferentiated connective tissue disease",
         "S-510" : "Age-related vision deterioration", 
         "S-813" : "Elevated CSF albumin and IgG",
@@ -71,7 +71,8 @@ SLE_2021 = {
         "S-1936" : "Difficulty walking from lower body weakness", 
         "S-551" : "Elevated ANA titer lab result",
         "S-448" : "Contact dermatitis",
-        "S-1279" : "Elevated erythrocyte sedimentation rate",
+        "S-1279" : "Elevated erythrocyte sedimentation rate w/ female tendency",
+        "S-1277" : "Elevated erythrocyte sedimentation rate w/ black race tendency",
         "S-770" : "Elevated metamyelocytes in CSF", # Indicate inflamation
         "S-1808": "Wrist joint pain",
         "S-069": "Sleep apnea",
@@ -81,10 +82,10 @@ SLE_2021 = {
         "S-1649": "Protein in urine",
         "S-1737": "Bee/wasp bite reactions",
         "S-1194": "Treatment w/ diphenhydramine",
-        "S-517": "CABG to treat coronary arteriosclerosis",
+        "S-517": "CABG to treat coronary atherosclerosis",
         "S-986" : "Benign prostatic hypertrophy w/o outflow obstruction tendency",
         "S-1498" : "Closed rib(s) fracture",
-        "S-1793" : "Blood coagulation disorder w/ elevated lupus anticoagulant Ab",
+        "S-1793" : "Blood coagulation disorder w/ elevated lupus anticoagulants Ab",
         "S-1385" : "Degenerative joint disease in lower extremeties",
         "S-476" : "Male decreased libido from allergic rhinitis sleep deprivation",
         "S-001" : "Age-related macular degeneration",
@@ -96,11 +97,35 @@ SLE_2021 = {
         "S-1167": "Myogenic ptosis",
         "S-771" : "Personality disorder",
         "S-1975" : "Pneumococcal pneumonia in multiple myeloma",
-        "S-114" : "Neurosis",
+        "S-114" : "Mood disorders",
         "S-1172" : "Pain in right foot",
         "S-1226": "Transient cerebral ischemia from aneurysm",
         "S-1100": "Clonazepan treatment",
-        "S-1592": "Idiopathic peripheral neuropathy"
+        "S-1592": "Idiopathic peripheral neuropathy",
+        "S-324": "Subarachnoid hemorrhage",
+        "S-331": "Diclofenac treatment", # treat migraines and headaches
+        "S-944": "Podiatric conditions",
+        "S-1115": "Elevated Q-T interval",
+        "S-131": "Procedure complication other than bleeding",
+        "S-1847": "Tachycardia",
+        "S-1858": "Critical illness complications",
+        "S-595": "Elevated lactate",
+        "S-614": "Celecoxib treatment", # pain medication in osteoarthritis
+        "S-1331": "GERD w/ Stricture of esophagus",
+        "S-265": "Peripheral neuritis in lower back",
+        "S-1950": "Head \& neck pain",
+        "S-312": "Cyst of ovary",
+        "S-1177": "Neurological disorder due to diabetes type 2",
+        "S-1097": "Spasmodic torticollis",
+        "S-1781": "Mononeuritis",
+        "S-145": "Hypertensive heart failure",
+        "S-266": "Acquired deformity of ankle-foot",
+        "S-1648": "Low-grade squamous intraepithelial lesion",
+        "S-544": "Rheumatoid arthritis treated with methotrexate",
+        "S-1013": "Hypothyroidism",
+        "S-1638": "Asthenia",
+        "S-239": "Neoplasm of uncertain behavior of skin",
+        "S-378": "Elevated ferritin"
         },
 
     'CHANNELS_MAP' : { # Mapping to for better strigns for each feature
