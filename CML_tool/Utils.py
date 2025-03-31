@@ -271,3 +271,14 @@ def math_w_tuple(t:tuple, op:str, num:float):
         return tuple(elem-num for elem in t)
     else:
         raise NotImplementedError('Possible operations: "divide", "multiply","sum" and "substract".')
+
+def split_at_mid_space(s):
+    mid = len(s) // 2
+    space_indices = [i for i, char in enumerate(s) if char == ' ']
+    
+    if not space_indices:
+        return s  # Handle case with no spaces
+    
+    # Find closest space to midpoint
+    closest = min(space_indices, key=lambda x: abs(x - mid))
+    return s[:closest] + '\n' + s[closest+1:]
