@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from functools import reduce
 
 from CML_tool.ML_Utils import compute_1dkde_curve
-from CML_tool.Utils import round_up_sig_figs
+from CML_tool.Utils import round_up_sig_figs, split_at_mid_space
 
 def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map, title, xmax, bandwidth, signs=None, npoints=None,
                          top:int=10, min_shap:float=1e-5, overlap: float=0.5, figsize:tuple=(4,2), fontsize:float=12, return_all=False, color_kde='C0', color_rugs='C1'):
@@ -263,8 +263,8 @@ def plot_comparing_raw_data_ridgelines(X_ref, X_comp, data_rep, all_features_nam
                                    title, bandwidth, label_ref, label_comp, zero_threshold = None,
                                    features_chars=None,
                                    return_all=False,
-                                   order:list=None, npoints=None, top:int=10, overlap: float=0.5,
-                                   figsize:tuple=(4,2), fontsize:float=12, x_label:str="Data",
+                                   order:list=None, npoints=None, top:int=10, overlap: float=0.5, limit_type: str or int='absolute',
+                                   figsize:tuple=(4,2), fontsize:float=12, x_label:str="Data", split_ylabels:bool = False,
                                    color_kde_ref='royalblue', color_rugs_ref='slateblue', color_kde_comp='darkviolet', color_rugs_comp='mediumorchid'):
     
     '''
@@ -286,21 +286,45 @@ def plot_comparing_raw_data_ridgelines(X_ref, X_comp, data_rep, all_features_nam
     assert np.shape(all_features_names)==np.shape(features_chars) or features_chars is None, f"`all_features_names` and `features_chars` must have the same shape. {all_features_names.shape} != {np.shape(features_chars)}"
     assert isinstance(order, list) or order is None, 'The order indices `order` must be a list of integers. Probably an array was passed.'
     
-    xmax = round_up_sig_figs(
-        number=np.maximum(
-            np.nanmax(X_ref),
-            np.nanmax(X_comp)
-            )*1.1,
-        sig_figs=2
-        )
+    if limit_type == 'absolute':
     
-    xmin = round_up_sig_figs(
-        number=np.minimum(
-            np.nanmin(X_ref),
-            np.nanmin(X_comp)
-            )*1.1,
-        sig_figs=2
-        )
+        xmax = round_up_sig_figs(
+            number=np.maximum(
+                np.nanmax(X_ref),
+                np.nanmax(X_comp)
+                )*1.1,
+            sig_figs=2
+            )
+        
+        xmin = round_up_sig_figs(
+            number=np.minimum(
+                np.nanmin(X_ref),
+                np.nanmin(X_comp)
+                )*1.1,
+            sig_figs=2
+            )
+        
+    elif isinstance(limit_type, int):
+        
+        assert 50<limit_type<100, f'limit_type must be in [51,99] instead of {limit_type}'
+        
+        xmax = round_up_sig_figs(
+            number=np.maximum(
+                np.nanmax(np.percentile(X_ref,limit_type,axis=1)),
+                np.nanmax(np.percentile(X_comp,limit_type,axis=1))
+                )*1.1,
+            sig_figs=2
+            )
+        
+        xmin = round_up_sig_figs(
+            number=np.minimum(
+                np.nanmin(np.percentile(X_ref,100-limit_type,axis=1)),
+                np.nanmin(np.percentile(X_comp,100-limit_type,axis=1))
+                )*1.1,
+            sig_figs=2
+            )
+    else:
+        raise ValueError(f'limit_type must be either `absolute` or integer in [51,99].')
     
     if npoints is None:
         npoints=int((xmax-xmin)/bandwidth)
@@ -321,6 +345,10 @@ def plot_comparing_raw_data_ridgelines(X_ref, X_comp, data_rep, all_features_nam
     # If passed, add feature characteristics to text labels
     if features_chars is not None:
         labels = [l+f' ({(np.round(c,decimals=3))})' for l,c in zip(labels, features_chars[top_idx])]
+        
+    # If asked, split ylabels in half
+    if split_ylabels:
+        labels =  [split_at_mid_space(l) for l in labels]
         
     fig = plt.figure(figsize=figsize)
     gs = fig.add_gridspec(nrows=top, ncols=1)
@@ -359,15 +387,15 @@ def plot_comparing_raw_data_ridgelines(X_ref, X_comp, data_rep, all_features_nam
         ax = fig.add_subplot(gs[i:i+1, :])
         axes.append(ax)
         
-        # Plot KDE for X_top
+        # Plot KDE for X_ref
         ax.fill_between(x_grid, curve_ref, color=color_kde_ref, alpha=0.25, linewidth=0)
         ax.plot(x_grid, curve_ref, color=color_kde_ref, linewidth=1.0, alpha=0.75, label=label_ref)
-        ax.scatter(row_ref, np.zeros(len(row_ref)), marker=3, color=color_rugs_ref, alpha=0.15)
+        ax.scatter(row_ref, np.zeros(len(row_ref)), marker=3, color=color_rugs_ref, alpha=0.3)
         
         # Plot KDE for X_comp
         ax.fill_between(x_grid, curve_comp, color=color_kde_comp, alpha=0.25, linewidth=0)
         ax.plot(x_grid, curve_comp, color=color_kde_comp, linewidth=1.0, alpha=0.75, label=label_comp)
-        ax.scatter(row_comp, np.zeros(len(row_comp)), marker=3, color=color_rugs_comp, alpha=0.15)
+        ax.scatter(row_comp, np.zeros(len(row_comp)), marker=3, color=color_rugs_comp, alpha=0.3)
         
         # Rest of the formatting remains the same
         ax.set_xlim(xmin, xmax)
@@ -413,4 +441,5 @@ def plot_comparing_raw_data_ridgelines(X_ref, X_comp, data_rep, all_features_nam
     if return_all:
         return fig, axes, curves_ref, curves_comp
     else:
-        return fig              
+        return fig             
+    
