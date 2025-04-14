@@ -13,7 +13,7 @@ from CML_tool.ML_Utils import compute_empirical_ci
 def scatter_plot(explanation, feature_idx, feature_names, 
                    show_scatter=True, show_reg=True, show_ci=True, 
                    ci_type='bootstrap', significance_level=0.05, n_bootstrap=1000,
-                   show_hist=True, hist_bins=30, alpha=0.6, **kwargs):
+                   show_hist=True, hist_bins=30, alpha=0.6, show=False, **kwargs):
     """
     Create an enhanced SHAP dependence plot with histograms and regression line using a SHAP Explainer.
     
@@ -44,6 +44,10 @@ def scatter_plot(explanation, feature_idx, feature_names,
         Number of bins for histograms
     alpha : float, default=0.6
         Transparency level
+    show : bool
+        Whether ``matplotlib.pyplot.show()`` is called before returning.
+        Setting this to ``False`` (default) allows the plot
+        to be customized further after it has been created.
     """
     
     shap_values = explanation.values[:, feature_idx] if explanation.values.ndim == 2 else explanation.values[:, feature_idx, 1]    
@@ -138,8 +142,11 @@ def scatter_plot(explanation, feature_idx, feature_names,
     feature_name = feature_names[feature_idx]
     ax_scatter.set_xlabel(r"$P(X)$: "+ feature_name, fontsize=kwargs.get('fontsize', 18))
     ax_scatter.set_ylabel(r"$P(Y|X): $ Shapley value", fontsize=kwargs.get('fontsize', 18))
-        
-    return fig, (ax_scatter, ax_hist_x, ax_hist_y)
+    
+    if show:
+        plt.show()
+    return
+    # return fig, (ax_scatter, ax_hist_x, ax_hist_y)
 
 
 def fit_univariate_spline(x, y, resolution=1000, s=None, k=3):
