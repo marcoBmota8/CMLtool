@@ -145,8 +145,8 @@ def scatter_plot(explanation, feature_idx, feature_names,
     
     if show:
         plt.show()
-    return
-    # return fig, (ax_scatter, ax_hist_x, ax_hist_y)
+    
+    return fig, (ax_scatter, ax_hist_x, ax_hist_y)
 
 
 def fit_univariate_spline(x, y, resolution=1000, s=None, k=3):
