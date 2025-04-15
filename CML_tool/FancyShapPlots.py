@@ -160,6 +160,7 @@ def scatter_plot(explanation, feature_idx, feature_names, spline_type='smoothing
     
     if show:
         plt.show()
+        return
     
     return fig, (ax_scatter, ax_hist_x, ax_hist_y)
 
@@ -168,7 +169,6 @@ def fit_univariate_spline(x, y, resolution=1000, s=None, k=3, spline='smoothing'
     """
     Fit a univariate spline to the data and 
     return the fitted spline and predicted values.
-    
     
     Parameters:
     -----------
