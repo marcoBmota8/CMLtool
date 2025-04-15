@@ -248,9 +248,9 @@ def scatter_plot(
     explanation,
     feature_idx,
     feature_names,
+    xlabel='default',
+    ylabel='default',
     ax=None,
-    xlabel=None,
-    ylabel=None,
     spline_type='smoothing',
     sigma=None,
     show_scatter=True,
@@ -276,6 +276,12 @@ def scatter_plot(
         Feature index
     feature_names : list
         List of feature names
+    xlabel : str, default='default'
+        X-axis label. If None is passed no label is shown.
+        If no string is passed the feature name is used (default).
+    ylabel : str, default='default'
+        Y-axis label. If None is passed no label is shown. 
+        If no string is passed the default label (P(Y): Shapley value) is used (default).
     ax : matplotlib.axes.Axes, optional
         Axes to plot on. If None, a new figure and axes are created and returned.
         If provided, the function will not create a new figure and return the axes.
@@ -384,21 +390,6 @@ def scatter_plot(
         ax_histx.hist(feature_vals, bins=hist_bins, alpha=1, density=True, color=kwargs.get('color_hist', 'C0'))
         ax_histy.hist(shap_values, bins=hist_bins, alpha=1, orientation='horizontal', density=True, color=kwargs.get('color_hist', 'C0'))
 
-        # # Hide all spines first
-        # for spine in ax_histx.spines.values():
-        #     spine.set_visible(False)
-        # for spine in ax_histy.spines.values():
-        #     spine.set_visible(False)
-            
-        # # Show all except bottom for ax_histx
-        # ax_histx.spines['top'].set_visible(True)
-        # ax_histx.spines['right'].set_visible(True)
-        # ax_histx.spines['left'].set_visible(True)
-        # # Show all except left for ax_histy
-        # ax_histy.spines['top'].set_visible(True)
-        # ax_histy.spines['right'].set_visible(True)
-        # ax_histy.spines['bottom'].set_visible(True)
-
         # Hide ticks and ticklabels for both histogram axes
         ax_histx.tick_params(
             axis='both', which='both',
@@ -412,13 +403,17 @@ def scatter_plot(
         )
 
     # Labels
-    if xlabel is not None:
+    if isinstance(xlabel, str) and xlabel != 'default': 
         ax.set_xlabel(xlabel, fontsize=kwargs.get('fontsize', 18))
+    elif xlabel is None:
+        pass
     else:
         feature_name = feature_names[feature_idx]
         ax.set_xlabel(r"$P(X)$: " + feature_name, fontsize=kwargs.get('fontsize', 18))
-    if ylabel is not None:
+    if isinstance(ylabel, str) and ylabel != 'default':
         ax.set_ylabel(ylabel, fontsize=kwargs.get('fontsize', 18))
+    elif ylabel is None:
+        pass
     else:
         ax.set_ylabel(r"$P(Y|X): $ Shapley value", fontsize=kwargs.get('fontsize', 18))
 
