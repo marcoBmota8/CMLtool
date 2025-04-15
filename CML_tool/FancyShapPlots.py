@@ -1,16 +1,19 @@
 # %%
+import logging
+ 
 import numpy as np
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import UnivariateSpline, PchipInterpolator
 from scipy import stats as st
+from scipy.ndimage import gaussian_filter1d
 
 from CML_tool.ML_Utils import compute_empirical_ci
 
 
-def scatter_plot(explanation, feature_idx, feature_names, 
+def scatter_plot(explanation, feature_idx, feature_names, spline_type='smoothing', sigma=None,
                    show_scatter=True, show_reg=True, show_ci=True, 
                    ci_type='bootstrap', significance_level=0.05, n_bootstrap=1000,
                    show_hist=True, hist_bins=30, alpha=0.6, show=False, **kwargs):
@@ -25,6 +28,8 @@ def scatter_plot(explanation, feature_idx, feature_names,
         Feature index
     feature_names : list
         List of feature names
+    spline_type: str, default='smoothing'
+        Type of spline to fit ('smoothing' or 'overfitted')
     show_scatter : bool, default=True
         Whether to show scatter points
     show_reg : bool, default=True
@@ -33,6 +38,10 @@ def scatter_plot(explanation, feature_idx, feature_names,
         Whether to show confidence intervals
     ci_type : str, default='bootstrap'
         Type of confidence interval to show ('prediction_error' or 'bootstrap')
+    sigma : float, default=None
+        Standard deviation for Gaussian smoothing (if None, no smoothing is applied)
+        Used to smooth the regression line and confidence intervals for
+        spline_type='overfitted' and ci_type='bootstrap'. Otherwise ignored.
     significance_level : float, default=0.05
         Significance level for confidence intervals
     n_bootstrap : int, default=1000
@@ -81,6 +90,7 @@ def scatter_plot(explanation, feature_idx, feature_names,
             s=s,
             k=k,
             resolution=resolution,
+            spline=spline_type
         ) 
         
         # Calculate and plot confidence intervals
@@ -100,7 +110,7 @@ def scatter_plot(explanation, feature_idx, feature_names,
             elif ci_type == 'bootstrap': # Bootstrap approach (Recommended for better trend approximation and accurate confidence intervals)
                 idx_boot = np.sort(np.random.choice(len(feature_vals), size= (n_bootstrap ,len(feature_vals)), replace=True))
                 data_boot = [(feature_vals[idx], shap_values[idx]) for idx in idx_boot]
-                X_splines = np.vstack([fit_univariate_spline(x, y, s=s, k=k,resolution=resolution)[2] for (x,y) in data_boot])
+                X_splines = np.vstack([fit_univariate_spline(x, y, s=s, k=k, resolution=resolution, spline=spline_type)[2] for (x,y) in data_boot])
                 X_splines = X_splines[~np.isnan(X_splines).any(axis=1)] # drop rows with NaN values
                 low_ci_lim, upper_ci_lim = zip(*compute_empirical_ci(
                     X=X_splines,
@@ -110,13 +120,18 @@ def scatter_plot(explanation, feature_idx, feature_names,
                 del y_pred
                 y_pred = np.median(X_splines, axis=0) # Median of all bootstrap samples
                 
+                if spline_type=='overfitted' and sigma is not None:
+                    low_ci_lim = gaussian_filter1d(low_ci_lim, sigma=sigma)
+                    upper_ci_lim = gaussian_filter1d(upper_ci_lim, sigma=sigma)
+                    y_pred = gaussian_filter1d(y_pred, sigma=sigma)
+                
             else:
                 raise ValueError("Invalid ci_type. Use `prediction_error` or `bootstrap`.")
             # Plot confidence intervals
             ax_scatter.fill_between(x_spline_pred, low_ci_lim, upper_ci_lim, color=kwargs.get('color_ci','lightblue'), alpha=0.25)
 
         # Plot the fitted spline    
-        ax_scatter.plot(x_spline_pred, y_pred, color=kwargs.get('color_reg', 'C0'), alpha=0.5)
+        ax_scatter.plot(x_spline_pred, y_pred, color=kwargs.get('color_reg', 'C0'), alpha=0.5, linewidth=kwargs.get('linewidth', 2))
         
     # Draw scatter plot
     if show_scatter:
@@ -149,7 +164,7 @@ def scatter_plot(explanation, feature_idx, feature_names,
     return fig, (ax_scatter, ax_hist_x, ax_hist_y)
 
 
-def fit_univariate_spline(x, y, resolution=1000, s=None, k=3):
+def fit_univariate_spline(x, y, resolution=1000, s=None, k=3, spline='smoothing'):
     """
     Fit a univariate spline to the data and 
     return the fitted spline and predicted values.
@@ -167,6 +182,8 @@ def fit_univariate_spline(x, y, resolution=1000, s=None, k=3):
         Smoothing factor (default is None, which means no smoothing)
     k : int, default=3
         Degree of the spline (default is cubic)
+    spline : bool, default='smoothing'
+        Whether to use a `smoothing` spline (default) or an `overfitted` PCHIP spline (only available if k is 3, i.e. cubic splines (default)).
     
     Returns:
     --------
@@ -203,8 +220,19 @@ def fit_univariate_spline(x, y, resolution=1000, s=None, k=3):
             # Fit a smoothing spline
             if s is None:
                 s = len(x_sorted[non_nan]) * 0.1
-            # Fit the spline
-            spline = UnivariateSpline(x_sorted[non_nan], y_sorted[non_nan], s=s, k=k)
+            if spline=='overfitted':
+                if k!=3:
+                    logging.info(f"Passed k={k}. Defaulting to cubic spline (k=3) for PCHIP interpolation.")
+                # Aggregate repeated x values for PchipInterpolator
+                unique_x = np.unique(x_sorted[non_nan])
+                y_mean = [np.mean(y_sorted[non_nan][x_sorted[non_nan] == x]) for x in unique_x]
+                spline = PchipInterpolator(unique_x, y_mean, extrapolate=True)            
+            elif spline=='smoothing':  
+                # Smoothing spline
+                spline = UnivariateSpline(x_sorted[non_nan], y_sorted[non_nan], s=s, k=k)
+            else:
+                raise ValueError("Invalid spline type. Use 'smoothing' with k in [1,5] or 'overfitted' with k=3.")
+            
             x_pred = np.linspace(min(x_sorted[non_nan]), max(x_sorted[non_nan]), resolution)
             y_pred = spline(x_pred)
         except Exception as e:
