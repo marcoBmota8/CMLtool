@@ -176,6 +176,9 @@ def scatter_plot(
             feature_vals, shap_values, alpha=alpha, edgecolor='none',
             color=kwargs.get('color_scatter', 'blue'), s=kwargs.get('marker_size', 8)
         )
+        xlims, ylims = ax.get_xlim(), ax.get_ylim() # Get the axis limits
+        ax.vlines(x=0, ymin=ylims[0], ymax=ylims[1], colors='gray', linestyles='dashed', lw=1, alpha=0.25)
+        ax.hlines(y=0, xmin=xlims[0], xmax=xlims[1], colors='gray', linestyles='dashed', lw=1, alpha=0.25)
         ax.tick_params(axis='both', which='both', labelsize=kwargs.get('fontsize', 16))
 
     # Regression line and confidence intervals
@@ -222,11 +225,11 @@ def scatter_plot(
             else:
                 raise ValueError("Invalid ci_type. Use `prediction_error` or `bootstrap`.")
             # Plot confidence intervals
-            ax.fill_between(x_spline_pred, low_ci_lim, upper_ci_lim, color=kwargs.get('color_ci','lightblue'), alpha=0.25)
+            ax.fill_between(x_spline_pred, low_ci_lim, upper_ci_lim, color=kwargs.get('color_ci','lightblue'), alpha=0.15)
         
         ax.plot(
             x_spline_pred, y_pred,
-            color=kwargs.get('color_reg', 'C0'), alpha=0.5, linewidth=kwargs.get('linewidth', 2)
+            color=kwargs.get('color_reg', 'C0'), alpha=0.33, linewidth=kwargs.get('linewidth', 2)
         )
 
     # Histograms (optional, can be improved for subplots)
@@ -234,8 +237,8 @@ def scatter_plot(
         # Set zero padding between histograms and main axis
         ax_histx = ax.inset_axes([0, 1.0, 1, 0.18], sharex=ax)
         ax_histy = ax.inset_axes([1.0, 0, 0.18, 1], sharey=ax)
-        ax_histx.hist(feature_vals, bins=hist_bins, alpha=1, density=True, color=kwargs.get('color_hist', 'C0'))
-        ax_histy.hist(shap_values, bins=hist_bins, alpha=1, orientation='horizontal', density=True, color=kwargs.get('color_hist', 'C0'))
+        ax_histx.hist(feature_vals, bins=hist_bins, alpha=1, color=kwargs.get('color_hist', 'C0'))
+        ax_histy.hist(shap_values, bins=hist_bins, alpha=1, orientation='horizontal', color=kwargs.get('color_hist', 'C0'))
 
         # Hide ticks and ticklabels for both histogram axes
         ax_histx.tick_params(
