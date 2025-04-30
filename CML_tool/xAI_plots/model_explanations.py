@@ -259,7 +259,7 @@ def plot_comparing_shap_ridgelines(shaps_ref, shaps_comp, data_rep, all_features
     else:
         return fig                         
 
-def plot_comparing_raw_data_ridgelines(X_ref, X_comp, data_rep, all_features_names, features_name_map, 
+def plot_comparing_raw_data_ridgelines(X_ref, X_comp, data_rep, all_features_names, features_name_map,  
                                    title, bandwidth, label_ref, label_comp, zero_threshold = None,
                                    features_chars=None,
                                    return_all=False,
@@ -368,8 +368,8 @@ def plot_comparing_raw_data_ridgelines(X_ref, X_comp, data_rep, all_features_nam
         
         # KDE reference
         curve_ref = compute_1dkde_curve(
-            x=row_ref[:,None],
-            x_grid=x_grid[:,None],
+            x=row_ref,
+            x_grid=x_grid,
             bandwidth=bandwidth,
             kernel='gaussian'
         )
@@ -377,8 +377,8 @@ def plot_comparing_raw_data_ridgelines(X_ref, X_comp, data_rep, all_features_nam
         
         # KDE comparison
         curve_comp = compute_1dkde_curve(
-            x=row_comp[:,None],
-            x_grid=x_grid[:,None],
+            x=row_comp,
+            x_grid=x_grid,
             bandwidth=bandwidth,
             kernel='gaussian'
         )
@@ -443,3 +443,42 @@ def plot_comparing_raw_data_ridgelines(X_ref, X_comp, data_rep, all_features_nam
     else:
         return fig             
     
+def single_ridgeline(data:np.array, bandwidth:float=1e-2, kernel:str='gaussian', xmin:float=None, xmax:float=None, ax:plt.axis=None, npoints:int=200,
+                      kde_color:str='C0', rug_color:str='C0', x_label:str='Data Values', y_label:str='Density', label:str=None, show:bool=False):
+    
+    assert data.ndim == 1, "Data must be a 1D array."
+
+    if xmax is None:
+        max_val = np.max(data)
+        xmax = max_val+0.1*abs(max_val)
+    if xmin is None:
+        min_val =  np.min(data)
+        xmin = min_val-0.1*abs(min_val)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(5, 5))
+        
+    x_grid = np.linspace(xmin, xmax, npoints)
+
+    curve = compute_1dkde_curve(x=data, x_grid=x_grid, bandwidth=bandwidth, kernel=kernel)
+
+    ax.fill_between(x_grid, curve, color=kde_color, alpha=0.2, linewidth=0)
+    ax.plot(x_grid, curve, color=kde_color, linewidth=1.0, label=label)
+    ax.scatter(data, np.zeros(len(data)), marker=3, color=rug_color, alpha=0.4)
+
+    ax.set_xlim(xmin, xmax)
+    ax.patch.set_alpha(0)
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+
+    ax.set_xlabel(x_label, fontsize=14)
+    ax.set_ylabel(y_label, fontsize=14)
+    
+    if show:
+        plt.show()
+    
+    if ax is None:
+        return fig, ax
+    else:
+        return ax.figure, ax
