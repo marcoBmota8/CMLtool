@@ -5,10 +5,25 @@ import logging
 import json
 import itertools
 import matplotlib.pyplot as plt
+
+from pathlib import Path
+
 from CML_tool.Utils import flatten_list
 from CML_tool.decorators import file_based_cacheing, file_based_figure_saving
 
 # %%
+def find_root(path, folder_name):
+    """
+    Given a file or directory path, return the Path up to and including
+    the first occurrence of folder_name when walking upward.
+    """
+    p = Path(path).resolve()
+    # start from the directory containing the file
+    for parent in (p if p.is_dir() else p.parent, *p.parents):
+        if parent.name == folder_name:
+            return parent
+    raise ValueError(f"Folder {folder_name!r} not found in path {p}")
+
 def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_name=None):
     '''
     Create the folder tree to store results for a given experiment root directory and metadata.
