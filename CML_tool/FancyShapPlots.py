@@ -191,11 +191,11 @@ def scatter_plot(
                 mask = labels == label
                 ax.scatter(
                     feature_vals[mask], shap_values[mask], 
-                    alpha=labels_dict[label].get(['alpha'], 0,5), 
-                    edgecolor=labels_dict[label].get(['edgecolor'], 'none'),
+                    alpha=labels_dict[label].get('alpha', 0.5), 
+                    edgecolor=labels_dict[label].get('edgecolor', 'none'),
                     color=labels_dict[label]['color'], 
                     s=labels_dict[label]['marker_size'],
-                    marker=labels_dict[label].get(['marker'], '.'),
+                    marker=labels_dict[label].get('marker', '.'),
                     label=labels_dict[label]['label'],
                 )
         else:
