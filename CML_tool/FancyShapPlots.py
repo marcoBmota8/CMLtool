@@ -95,6 +95,8 @@ def scatter_plot(
     explanation,
     feature_idx,
     feature_names,
+    labels=None,
+    labels_dict=None,
     xlabel='default',
     ylabel='default',
     ax=None,
@@ -108,7 +110,6 @@ def scatter_plot(
     n_bootstrap=1000,
     show_hist=True,
     hist_bins=30,
-    alpha=0.6,
     show=False,
     **kwargs
 ):
@@ -123,6 +124,19 @@ def scatter_plot(
         Feature index
     feature_names : list
         List of feature names
+    labels : np.array or list, default=None
+        Binary labels for the data points
+        If None, all scatter data points are shown with the same specs (color, alpha and marker)
+    labels_dict : dict, default=None
+        Dictionary mapping labels to the plotting specs of each unique value
+        The dictionary should contain the following keys:
+            - 'color': Color of the points and histograms
+            - 'alpha': Transparency level
+            - 'marker_size': Size of the points
+            - 'marker': Marker style
+            - 'label': String for the label class legend
+            - 'edgecolor': Edge color of the points (optional)        
+        If None, the default specs are used for all points. 
     xlabel : str, default='default'
         X-axis label. If None is passed no label is shown.
         If no string is passed the feature name is used (default).
@@ -155,8 +169,6 @@ def scatter_plot(
         Whether to show histograms
     hist_bins : int, default=30
         Number of bins for histograms
-    alpha : float, default=0.6
-        Transparency level
     show : bool
         Whether ``matplotlib.pyplot.show()`` is called before returning.
     """
@@ -172,10 +184,25 @@ def scatter_plot(
 
     # Main scatter plot
     if show_scatter:
-        ax.scatter(
-            feature_vals, shap_values, alpha=alpha, edgecolor='none',
-            color=kwargs.get('color_scatter', 'blue'), s=kwargs.get('marker_size', 8)
-        )
+        
+        if labels is not None:
+            unique_labels = np.unique(labels)
+            for label in unique_labels:
+                mask = labels == label
+                ax.scatter(
+                    feature_vals[mask], shap_values[mask], 
+                    alpha=labels_dict[label].get(['alpha'], 0,5), 
+                    edgecolor=labels_dict[label].get(['edgecolor'], 'none'),
+                    color=labels_dict[label]['color'], 
+                    s=labels_dict[label]['marker_size'],
+                    marker=labels_dict[label].get(['marker'], '.'),
+                    label=labels_dict[label]['label'],
+                )
+        else:
+            ax.scatter(
+                feature_vals, shap_values, alpha=kwargs.get('alpha', 0.5), edgecolor='none',
+                color=kwargs.get('color_scatter', 'blue'), s=kwargs.get('marker_size', 8)
+            )
         xlims, ylims = ax.get_xlim(), ax.get_ylim() # Get the axis limits
         ax.vlines(x=0, ymin=ylims[0], ymax=ylims[1], colors='gray', linestyles='dashed', lw=1, alpha=0.25)
         ax.hlines(y=0, xmin=xlims[0], xmax=xlims[1], colors='gray', linestyles='dashed', lw=1, alpha=0.25)
@@ -237,8 +264,15 @@ def scatter_plot(
         # Set zero padding between histograms and main axis
         ax_histx = ax.inset_axes([0, 1.0, 1, 0.18], sharex=ax)
         ax_histy = ax.inset_axes([1.0, 0, 0.18, 1], sharey=ax)
-        ax_histx.hist(feature_vals, bins=hist_bins, alpha=1, color=kwargs.get('color_hist', 'C0'))
-        ax_histy.hist(shap_values, bins=hist_bins, alpha=1, orientation='horizontal', color=kwargs.get('color_hist', 'C0'))
+        
+        if labels is not None:
+            for label in unique_labels:
+                mask = labels == label
+                ax_histx.hist(feature_vals[mask], bins=hist_bins, alpha=0.6, color=labels_dict[label]['color'])
+                ax_histy.hist(shap_values[mask], bins=hist_bins, alpha=0.6, orientation='horizontal', color=labels_dict[label]['color'])
+        else:
+            ax_histx.hist(feature_vals, bins=hist_bins, alpha=1, color=kwargs.get('color_hist', 'C0'))
+            ax_histy.hist(shap_values, bins=hist_bins, alpha=1, orientation='horizontal', color=kwargs.get('color_hist', 'C0'))
 
         # Hide ticks and ticklabels for both histogram axes
         ax_histx.tick_params(
