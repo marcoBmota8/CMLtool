@@ -1,11 +1,13 @@
 # %%
+import logging
+
 import numpy as np
 import scipy.stats 
 import scipy.special
 import xgboost as xgb 
 from typing import Tuple
 
-from CML_tool.ML_Utils import contains_val_CI
+from .ML_Utils import contains_val_CI
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -87,7 +89,7 @@ def fastDeLong(predictions_sorted_transposed, label_1_count):
     delongcov = sx / m + sy / n #covariance matrix of AUCs to compare
     return aucs, delongcov
 
-def calc_pvalue(aucs, sigma_sq, type='wald', alpha=0.05):
+def calc_pvalue(aucs, sigma_sq, ci_type='wald', alpha=0.05):
     """Computes and returns the AUC difference
     test statistic (U-statistic difference)
     and the p-value log(10) of the test
@@ -124,9 +126,9 @@ def calc_pvalue(aucs, sigma_sq, type='wald', alpha=0.05):
     pvalue = 10**log10_p_value[0][0]
 
    # Confidence interval of the AUC difference.
-    if type == 'wald':
+    if ci_type == 'wald':
        ci_low_lim, ci_up_lim = np.ravel(wald_delong_ci(alpha = alpha, theta = auc_diff, var = sigma_diff**2))
-    elif type == 'logistic':
+    elif ci_type == 'logistic':
        ci_low_lim, ci_up_lim = np.ravel(delong_logistic_ci(alpha = alpha, theta = auc_diff, var = sigma_diff**2))
     else:
          raise ValueError("ci_type must be 'wald' or 'logistic'. Got: %s" % type)
@@ -137,6 +139,9 @@ def calc_pvalue(aucs, sigma_sq, type='wald', alpha=0.05):
         significance = False
     
     # Confidence interval crossing zero
+    if ci_type == 'logistic':
+        logging.warning('Indicator for AUC difference confidence interval crossing 0 is not valid for logistic confidence interval. Use wald confidence interval instead.')
+        
     ci_crossing = contains_val_CI((ci_low_lim, ci_up_lim),0)
 
     return auc_diff_signed[0], pvalue, significance, (ci_low_lim,ci_up_lim), ci_crossing
@@ -202,23 +207,37 @@ def delong_roc_variance(ground_truth, predictions):
     assert len(aucs) == 1, "There is a bug in the code, please forward this to the developers"
     return aucs[0], delongcov
 
-def delong_roc_test(ground_truth, predictions_one, predictions_two,alpha, printing=False):
+def delong_roc_test(ground_truth, predictions_one, predictions_two, ci_type='wald', alpha=0.05):
     """Computes log(p-value) for hypothesis that two ROC AUCs are different.
 
     Args:
-       ground_truth: np.array of 0 and 1
-       predictions_one: predictions of the first model,
-          np.array of floats of the probability of being class 1
-       predictions_two: predictions of the second model,
-          np.array of floats of the probability of being class 1
-    Returns:
+        ground_truth: np.array of 0 and 1
+        predictions_one: predictions of the first model,
+            np.array of floats of the probability of being class 1
+        predictions_two: predictions of the second model,
+            np.array of floats of the probability of being class 1
+        ci_type (str): Type of confidence interval to compute.        
+            - "wald": Wald confidence interval of the AUC difference. (Default)
+            - "logistic": Logistic confidence interval of the AUC difference
+        alpha(float): sinificance level. (Default=0.05)
         
+    Returns:
+        AUC_diff_signed (float): Difference in AUCs with sign (auc1-auc2)
+        pvalue: p-value of the DeLong test
+        significance (bool): Whether or not the test is significant at the significance level requested. 
+        ci (tuple): Confidence interval (as specified by the user) of the AUC difference.
+            -"wald": Wald confidence interval of the AUC difference.
+                Must use if looking whether or not the confidence interval of the difference crosses 0
+            -"logistic": Logistic confidence interval of the AUC difference 
+                Important! Do not use for looking to whether or not the CI crosses 0, it will never do so as it 
+                confines values in [0,1].
+        ci_crossing (bool): Whether or not the confidence interval crosses zero or not.
 
     """
     order, label_1_count, _ = compute_ground_truth_statistics(ground_truth)
     predictions_sorted_transposed = np.vstack((predictions_one, predictions_two))[:, order]
     aucs, delongcov = fastDeLong(predictions_sorted_transposed, label_1_count)
-    return calc_pvalue(aucs, delongcov, alpha=alpha, printing = printing)
+    return calc_pvalue(aucs, delongcov, ci_type=ci_type, alpha=alpha)
 
 
 def auc_ci(ground_truth,predictions,alpha=0.05):
@@ -258,26 +277,6 @@ def fit_method_delong_auroc(predt: np.ndarray, dataset: xgb.DMatrix) -> Tuple[st
         ground_truth=dataset.get_label()
     )[0]
     return 'DeLong_AUROC', float(dl_auc)
-
-
-#%%
-if __name__=='__main__':
-
-    # Perfect case
-    probs = np.array(45*[1,1,1,1,0,1,0,0,1,1,1,1,1,1])
-    gt = np.array(45*[1,1,1,1,0,1,0,0,1,1,1,1,1,1])
-    auc_ci(alpha=0.05, ground_truth=gt,predictions=probs,printing=True)
-
-    
-    #Comparison
-    probs1 = np.array(45*[0.5,0.6,0.9,0.1,0.001,0.67,0.87,0.35,0.75,0.5,0.5,0.4,0.6,0.7])
-    probs2 = np.array(45*[0.45,0.2,0.99,0.001,0.25,0.8,0.4,0.9,0.7,0.5,0.5,0.4,0.6,0.7])
-    delong_roc_test(gt,probs1,probs2,alpha = 0.05, printing=True)
-
-    auc_ci(alpha = 0.05,ground_truth=gt,predictions=probs1,printing = True)
-    auc_ci(alpha = 0.05,ground_truth=gt,predictions=probs2,printing = True)
-
-# %%
 
 
 
