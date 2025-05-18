@@ -13,28 +13,18 @@ def calc_pvalue(aucs, sigma_sq, alpha,n):
     """Computes the AUCPR difference test (Z-statistic difference) giving a p-value and whether
     the difference is significant or not. The test is based on the binomial-normal approximation.
     It also returns a Wald confidence interval for the difference in AUCPRs.
-
-    Args:
-       aucs: 1D array of AUCs
-       sigma_sq: AUC variance
-    Returns:
-       log10(pvalue)
-       test statistic
-       CI
+    
+        Args:
+            aucs (list): List of two AUCPRs.
+            sigma_sq (list): List of two variances. # Unused
+            alpha (float): Significance level.
+            n (int): Number of positive samples.
+        Returns:
+            pvalue (float): P-value for the test.
+            ci (tuple): Confidence interval for the difference in AUCPRs.
+            significance (bool): Whether the difference is significant or not.
 
     """
-    #Individual AUCs
-    # I
-    up_lim_AUC1, low_lim_AUC1 = np.ravel(Wald_AUCPR_CI(alpha = alpha, theta=aucs[0], n = n))
-    print('AUC 1 = ', aucs[0], 'variance = ',sigma_sq[0],
-    str(int((1-alpha)*100)),'% CI:[',low_lim_AUC1,',',up_lim_AUC1,'] \n')
-
-    #II
-    up_lim_AUC2, low_lim_AUC2 = np.ravel(Wald_AUCPR_CI(alpha = alpha, theta=aucs[1], n = n))
-    print('AUC 2 = ', aucs[1], 'variance = ',sigma_sq[1],
-    str(int((1-alpha)*100)),'% CI:[',low_lim_AUC2,',',up_lim_AUC2,']\n')
-    
-    #TEST
     #test statistic to compare two binomial distributions (does not account for correlation as DeLong's test does for AUROC)
     aucpr_diff = aucs[0]-aucs[1]
     theta_hat = (aucs[0]+ aucs[1])/2
@@ -44,25 +34,23 @@ def calc_pvalue(aucs, sigma_sq, alpha,n):
     log10_p_value = np.log10(2) + scipy.stats.norm.logsf(z, loc=0, scale=1) / np.log(10) #calculate p-value while changing its logarithmic base (e->10)
     pvalue = 10**log10_p_value
 
-   #CI
-    up_lim, low_lim = binomial_difference_Wald_CI(theta1=aucs[0],theta2=aucs[1],n1=n,n2=n,alpha=alpha)
-
-    print('Z-test test results: log10(p-value)= ', log10_p_value, '(p-value = ',pvalue,'), AUC difference = ',aucpr_diff, 
-    str(int((1-alpha)*100)),'% CI:[',up_lim,',',low_lim,']')
+   # Confidence interval
+    up_lim, low_lim = binomial_difference_wald_ci(theta1=aucs[0],theta2=aucs[1],n1=n,n2=n,alpha=alpha)
 
     if pvalue<alpha:
-      print('\n Significant')
+        significance = True
     else:
-      print('\n Not significant')
+        significance = False
+        
+    return 10**log10_p_value, (up_lim, low_lim), significance
 
-
-def binomial_difference_Wald_CI(theta1,theta2,n1,n2,alpha):
+def binomial_difference_wald_ci(theta1,theta2,n1,n2,alpha):
     theta_diff = theta1-theta2
     standard_error = np.sqrt(theta1*(1-theta1)/n1 + theta2*(1-theta2)/n2)
     z = scipy.stats.norm.ppf(1-alpha/2) * standard_error
     return theta_diff - z, theta_diff + z
 
-def AUCPR_logit_CI(alpha,theta,n):
+def auprc_logit_ci(alpha,theta,n):
     """
     Assymmetric logit confidence interval.
     Makes use of the logistic tranformation to ensure that the confidence
@@ -82,7 +70,7 @@ def AUCPR_logit_CI(alpha,theta,n):
         
     return np.ravel(low_lim), np.ravel(up_lim)
 
-def Wald_AUCPR_CI (alpha,theta, n):
+def wald_auprc_ci (alpha,theta, n):
     """
     Binomial Wald confidence interval detailed in Boyd et al. 2013.
     Makes use of the binomial- normal approximation variance
@@ -92,7 +80,7 @@ def Wald_AUCPR_CI (alpha,theta, n):
 
     return np.ravel(low_lim), np.ravel(up_lim)
 
-def AUCPR_comparison_test(ground_truth,probs1, probs2, alpha):
+def auprc_comparison_test(ground_truth,probs1, probs2, alpha):
     assert np.unique(ground_truth).tolist() == [0,1], 'Ground truth labels must be binary'
     n = sum(ground_truth)
     aucs = []
@@ -103,39 +91,32 @@ def AUCPR_comparison_test(ground_truth,probs1, probs2, alpha):
     var.append(aucs[1]*(1-aucs[1]))
     return calc_pvalue(aucs = aucs, sigma_sq = var, alpha = alpha, n = n)
 
-def AUC_CI(ground_truth,predictions,alpha):
+def auc_ci(ground_truth,predictions, ci_type='wald', alpha=0.05):
     """
-    Gives CI for a
-    set of prediction
-    probabilities
-    and the corresponding
-    ground truth 
-    labels
+    Computes the AUC and its confidence interval.
+    
+        Args:
+            ground_truth (array): True labels.
+            predictions (array): Predicted probabilities.
+            ci_type (str): Type of confidence interval. 'logistic' or 'wald'. Default is 'wald'.
+            alpha (float): Significance level. Default is 0.05.
+        Returns:
+            aucpr (float): AUC value.
+            variance (float): Variance of the AUC.
+            ci (tuple): Confidence interval for the AUC.
     """
     assert np.unique(ground_truth).tolist() == [0,1], 'Ground truth labels must be binary'
     n = sum(ground_truth)
     aucpr = average_precision_score(y_true=ground_truth, y_score=predictions)
     variance = aucpr*(1-aucpr)
-    logit_low_lim, logit_up_lim = np.ravel(AUCPR_logit_CI(alpha = alpha,theta = aucpr, n = n))
-    wald_low_lim, wald_up_lim = np.ravel(Wald_AUCPR_CI(alpha = alpha,theta = aucpr, n = n))
-
-    return aucpr, variance, wald_low_lim, wald_up_lim, logit_low_lim, logit_up_lim
-
-
-#%%
-if __name__=='__main__':
-
-    # Perfect case
-    probs = np.array([1,1,1,1,0,1,0,0,1,1,1,1,1,1])
-    gt = np.array([1,1,1,1,0,1,0,0,1,1,1,1,1,1])
-    print(AUC_CI(alpha=0.05, ground_truth=gt,predictions=probs))
-
-    
-    #Comparison
-    probs1 = np.array([0.5,0.6,0.9,0.1,0.001,0.67,0.87,0.35,0.75,0.5,0.5,0.4,0.6,0.7])
-    probs2 = np.array([0.45,0.2,0.99,0.001,0.25,0.8,0.4,0.9,0.7,0.5,0.5,0.4,0.6,0.7])
-    print(AUCPR_comparison_test(gt,probs1,probs2,alpha = 0.05))
-
-    print(AUC_CI(alpha = 0.05,ground_truth=gt,predictions=probs1))
-    print(AUC_CI(alpha = 0.05,ground_truth=gt,predictions=probs2))
-# %%
+    if ci_type == 'logistic':
+        ci_low_lim, ci_up_lim = np.ravel(auprc_logit_ci(alpha = alpha,theta = aucpr, n = n))
+    elif ci_type == 'wald':
+        ci_low_lim, ci_up_lim = np.ravel(wald_auprc_ci(alpha = alpha,theta = aucpr, n = n))
+        if ci_low_lim < 0:
+            ci_low_lim = 0
+        if ci_up_lim > 1:
+            ci_up_lim = 1
+    else:
+        raise ValueError("ci_type must be either 'logistic' or 'wald'")
+    return aucpr, variance, (ci_low_lim, ci_up_lim)
