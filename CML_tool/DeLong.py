@@ -117,8 +117,8 @@ def calc_pvalue(aucs, sigma_sq, ci_type='wald', alpha=0.05):
     # Test  
     l = np.array([[1, -1]])
     sigma_diff = np.sqrt(np.dot(np.dot(l, sigma_sq), l.T)) #std of the AUC difference
-    auc_diff = abs(np.diff(aucs))  # AUC difference absolute value
-    auc_diff_signed = np.diff(aucs) # AUC difference
+    auc_diff = abs(np.diff(aucs[::-1]))  # AUC difference absolute value
+    auc_diff_signed = np.diff(aucs[::-1]) # AUC difference
     z = auc_diff/np.maximum(sigma_diff, 1e-10) #U-statistic
     
     # p-value
@@ -240,7 +240,7 @@ def delong_roc_test(ground_truth, predictions_one, predictions_two, ci_type='wal
     return calc_pvalue(aucs, delongcov, ci_type=ci_type, alpha=alpha)
 
 
-def auc_ci(ground_truth,predictions,alpha=0.05):
+def auc_ci(ground_truth,predictions,alpha=0.05, ci_type='wald'):
     """Calculate DeLong AUROC and provide
     both logistic and wald confidence intervals.
     
@@ -257,10 +257,14 @@ def auc_ci(ground_truth,predictions,alpha=0.05):
 
     """
     auc, variance = delong_roc_variance(ground_truth,predictions)
-    low_lim_wald, up_lim_wald = np.ravel(wald_delong_ci(alpha = alpha,theta = auc,var = variance))
-    low_lim_logistic, up_lim_logistic= np.ravel(delong_logistic_ci(alpha = alpha,theta = auc, var = variance))
-    
-    return auc, variance, (low_lim_wald, up_lim_wald), (low_lim_logistic, up_lim_logistic)
+    if ci_type == 'wald':
+        low_lim_ci, up_lim_ci = np.ravel(wald_delong_ci(alpha = alpha,theta = auc,var = variance))
+    elif ci_type == 'logistic':
+        low_lim_ci, up_lim_ci = np.ravel(delong_logistic_ci(alpha = alpha,theta = auc,var = variance))
+    else:
+        raise ValueError("ci_type must be 'wald' or 'logistic'. Got: %s" % type)
+        
+    return auc, variance, (low_lim_ci, up_lim_ci)
 
 
 def fit_method_delong_auroc(predt: np.ndarray, dataset: xgb.DMatrix) -> Tuple[str, float]:
