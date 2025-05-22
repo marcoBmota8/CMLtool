@@ -94,3 +94,21 @@ class AurocStats:
             return True, p_value, wald_ci, logistic_ci 
         else:
             return False, p_value,wald_ci, logistic_ci
+        
+    def roc_auc_single_point(specificity, sensitivity):
+        '''
+            Uses the method in 'A note on ROC analysis and non-parametric estimate of sensitivity'
+            by Zhang and Mueller 2005 to estimate the minimum and maximum areas under the ROC curves
+            given a single point (1-specificity, sensitivity).
+        '''
+        auc_min = (sensitivity + specificity)/2 
+        false_discovery_rate = 1-specificity
+        if false_discovery_rate<=0.5<sensitivity:
+            auc_max = 1-2*false_discovery_rate*(1-sensitivity)
+        elif false_discovery_rate<=sensitivity<0.5:
+            auc_max = 1-false_discovery_rate/(2*sensitivity)
+        elif 0.5<false_discovery_rate<sensitivity:
+            auc_max = 1-((1-sensitivity)/(2*specificity))
+        else:
+            raise ValueError('Invalid specificity and sensitivity values')
+        return (auc_min, auc_max)
