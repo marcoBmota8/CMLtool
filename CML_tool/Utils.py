@@ -247,31 +247,6 @@ def look_up_description(df,description):
     print(results)
     return results
 
-def twoarrays_2_tupledf(array1:np.array,array2:np.array):
-    # Create a new array to store tuples
-    combined_array = np.empty(array1.shape, dtype=tuple)
-
-    for i in range(array1.shape[0]):
-        for j in range(array1.shape[1]):
-            combined_array[i, j] = (array1[i, j], array2[i, j])
-            
-    return pd.DataFrame(combined_array)
-
-def math_w_tuple(t:tuple, op:str, num:float):
-    '''
-    Function that allow to multiply or divide a tuple by a contstant.
-    ''' 
-    if op == 'divide':
-        return tuple(elem/num for elem in t)
-    elif op == 'multiply':
-        return tuple(elem*num for elem in t)
-    elif op == 'sum':
-        return tuple(elem+num for elem in t)
-    elif op == 'susbtract':
-        return tuple(elem-num for elem in t)
-    else:
-        raise NotImplementedError('Possible operations: "divide", "multiply","sum" and "substract".')
-
 def split_at_mid_space(s):
     mid = len(s) // 2
     space_indices = [i for i, char in enumerate(s) if char == ' ']
