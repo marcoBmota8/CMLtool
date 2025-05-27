@@ -186,6 +186,7 @@ def file_based_fig_ax_objects(filename:str=None, path:str=None):
             # call the original function to create the figure
             except:
                 fig, ax = plot_func(*args, **kwargs)
+                os.makedirs(func_path, exist_ok=True)  # Ensure the directory exists
                 with open(os.path.join(func_path, func_filename+'.pkl'), 'wb') as f:
                     pickle.dump((fig, ax), f)
                 logging.info(f"Figure and axis object SAVED as {func_path}/{func_filename}.pkl")
