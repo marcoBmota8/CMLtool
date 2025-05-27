@@ -1,3 +1,5 @@
+from matplotlib.pyplot import cm, get_cmap
+
 SLE_2021 = {
     'SIGNATURES_MAP' : {
         "S-650": "SLE w/ organ/system involvement",
@@ -142,6 +144,22 @@ SLE_2021 = {
         "Estimation of glomerular filtration rate" : "eGFR",
         'Antithrombin actual/normal in Platelet poor plasma by Chromogenic method' : "Antithrombin actual/normal in PPP (chromogenic method)"
     }
+}
+
+
+race_cohort_map = {
+    'White': (
+        '#1f6cb4',
+        '#2cc4f8'
+        ),
+    'Black': (
+        '#f5770a',
+        '#f79f52'
+        ),
+    'Both': (
+        '#0a090a',
+        '#5e5b5e'
+        ),
 }
 
 #  # %%
