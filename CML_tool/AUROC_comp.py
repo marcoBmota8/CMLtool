@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import norm
 
-from CML_tool.DeLong import delong_roc_variance, Wald_type_DL_CI, DL_logistic_CI
+from CML_tool.DeLong import delong_roc_variance, wald_delong_ci, delong_logistic_ci
 
 class AurocStats:
     '''
@@ -88,27 +88,31 @@ class AurocStats:
         critical_ratio = auroc_diff/se_diff # U-statistic
         p_value = 2*(1-norm.cdf(critical_ratio)) # p-value on the difference
         z = norm.ppf(1-alpha/2) # z-statistic
-        wald_ci = (Wald_type_DL_CI(alpha=alpha, theta=auroc_diff, Var=se_diff**2))# Wald confidence interval
-        logistic_ci = (DL_logistic_CI(alpha=alpha, theta=auroc_diff, Var=se_diff**2)) # Logistic confidence interval
+        wald_ci = (wald_ci(alpha=alpha, theta=auroc_diff, Var=se_diff**2))# Wald confidence interval
+        logistic_ci = (logistic_ci(alpha=alpha, theta=auroc_diff, Var=se_diff**2)) # Logistic confidence interval
         if critical_ratio>=z:
             return True, p_value, wald_ci, logistic_ci 
         else:
             return False, p_value,wald_ci, logistic_ci
         
-    def roc_auc_single_point(specificity, sensitivity):
-        '''
-            Uses the method in 'A note on ROC analysis and non-parametric estimate of sensitivity'
-            by Zhang and Mueller 2005 to estimate the minimum and maximum areas under the ROC curves
-            given a single point (1-specificity, sensitivity).
-        '''
-        auc_min = (sensitivity + specificity)/2 
-        false_discovery_rate = 1-specificity
-        if false_discovery_rate<=0.5<sensitivity:
-            auc_max = 1-2*false_discovery_rate*(1-sensitivity)
-        elif false_discovery_rate<=sensitivity<0.5:
-            auc_max = 1-false_discovery_rate/(2*sensitivity)
-        elif 0.5<false_discovery_rate<sensitivity:
-            auc_max = 1-((1-sensitivity)/(2*specificity))
-        else:
-            raise ValueError('Invalid specificity and sensitivity values')
-        return (auc_min, auc_max)
+def roc_auc_single_point(specificity, sensitivity):
+    '''
+        Uses the method in 'A note on ROC analysis and non-parametric estimate of sensitivity'
+        by Zhang and Mueller 2005 to estimate the minimum and maximum areas under the ROC curves
+        given a single point (1-specificity, sensitivity).
+    '''
+    auc_min = (sensitivity + specificity)/2 
+    false_discovery_rate = 1-specificity
+    
+    if false_discovery_rate<=0.5<sensitivity:
+        auc_max = 1-2*false_discovery_rate*(1-sensitivity)
+        
+    elif false_discovery_rate<=sensitivity<0.5:
+        auc_max = 1-false_discovery_rate/(2*sensitivity)
+        
+    elif 0.5<false_discovery_rate<sensitivity:
+        auc_max = 1-((1-sensitivity)/(2*specificity))
+        
+    else:
+        auc_max = 0.5
+    return (auc_min, auc_max)
