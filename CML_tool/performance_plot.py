@@ -11,7 +11,9 @@ def compute_auroc_sample(sample_idx, data, labels):
     fpr, tpr, _ = roc_curve(labels[sample_idx], data[sample_idx])
     return tpr, fpr
 
-def plot_AUROC(labels:np.array, predictions:np.array, figsize:tuple, style:str = None, color_line:str="b", color_ci:str="dodgerblue", n_boot_iters:float or int=5000, alpha:float=0.05, n_jobs:int=1, ax:plt.axis=None, fig:plt.figure=None):
+def plot_AUROC(labels:np.array, predictions:np.array, figsize:tuple, style:str = None, color_line:str="b", color_ci:str="dodgerblue",
+               n_boot_iters:float or int=5000, alpha:float=0.05, label_fontsize:int=18, ticks_fontsize:int=18, legend_fontsize:int=18,
+               label:str='AUROC', n_jobs:int=1, ax:plt.axis=None, fig:plt.figure=None):
     """ Plots the AUROC curve for a given set of labels and predictions.
         Confidence 
     Args:
@@ -23,6 +25,9 @@ def plot_AUROC(labels:np.array, predictions:np.array, figsize:tuple, style:str =
         - color_ci (string): Color of the confidence interval (Default:"dodgerblue")
         - n_boot_iters (float or integer): Number of bootstrapped repeats to perform to find the confidence intervals and mean curve. (Default=5000)
         - alpha (float): Significance level. (Default=0.05)
+        - label_fontsize (int): Font size of the labels. (Default=18)
+        - ticks_fontsize (int): Font size of the ticks. (Default=18)
+        - legend_fontsize (int): Font size of the legend. (Default=18)
         - n_jobs (int): Number of treaths/workers to use. (Default=1)
         - fig: Matplotlib figure object. Needed if one wants to plot on top of an existing figure.
         - ax: Axis of the figure object. Needed if one wants to plot on top of an existing figure.
@@ -75,22 +80,22 @@ def plot_AUROC(labels:np.array, predictions:np.array, figsize:tuple, style:str =
     # Plotting
     if ax==None:
         fig, ax = plt.subplots(figsize=figsize) 
-        ax.plot([0, 1], [0, 1], linestyle="--", lw=2, color="r", label=r"Chance: %0.3f" % float(1/2), alpha=0.8)
-    ax.plot(interp_fpr, interp_tpr_estimate, color=color_line,label=r"AUROC: %0.3f" % auroc_estimate,lw=2,alpha=1,)
+        ax.plot([0, 1], [0, 1], linestyle="--", lw=2, color="gray", label='_nolegend_', alpha=0.5)
+    ax.plot(interp_fpr, interp_tpr_estimate, color=color_line,label=label+r": %0.3f [%0.3f, %0.3f]" %  (auroc_estimate, lower_ci, upper_ci) ,lw=2,alpha=1,)
     if style == 'science':
         plt.style.use("science")
-        ax.fill_between(interp_fpr, lower_ci_tpr, upper_ci_tpr, color=color_ci, alpha=0.3, label=r"%d%s CI: [%0.3f, %0.3f]" % (int((1-alpha)*100),'\%', lower_ci, upper_ci))
+        ax.fill_between(interp_fpr, lower_ci_tpr, upper_ci_tpr, color=color_ci, alpha=0.15, label='_nolegend_')
     else:
-        ax.fill_between(interp_fpr, lower_ci_tpr, upper_ci_tpr, color=color_ci, alpha=0.3, label=r"%d%%CI: [%0.3f, %0.3f]" % (int((1-alpha)*100), lower_ci, upper_ci))
+        ax.fill_between(interp_fpr, lower_ci_tpr, upper_ci_tpr, color=color_ci, alpha=0.15, label='_nolegend_')
     ax.set(
         xlim=[-0.02, 1.02],
         ylim=[-0.02, 1.02],
     )
-    ax.legend(loc="lower right", fontsize=18)
-    ax.set_xlabel('1-Specificity',fontsize=18)
-    ax.set_ylabel('Sensitivity',fontsize=18)
-    ax.xaxis.set_tick_params(labelsize=18)
-    ax.yaxis.set_tick_params(labelsize=18)
+    ax.legend(loc="lower right", fontsize=legend_fontsize)
+    ax.set_xlabel('1-Specificity',fontsize=label_fontsize)
+    ax.set_ylabel('Sensitivity',fontsize=label_fontsize)
+    ax.xaxis.set_tick_params(labelsize=ticks_fontsize)
+    ax.yaxis.set_tick_params(labelsize=ticks_fontsize)
     
     return fig, ax
    
@@ -98,7 +103,9 @@ def compute_AUPRC_sample(sample_idx, data, labels):
     precision, recall, _ = precision_recall_curve(labels[sample_idx], data[sample_idx])
     return precision, recall 
     
-def plot_AUPRC(labels:np.array, predictions:np.array, figsize:tuple, style:str, color_line:str="b", color_ci:str="dodgerblue", n_boot_iters:float or int=5000, alpha:float=0.05, n_jobs:int=1, ax:plt.axis=None, fig:plt.figure=None):
+def plot_AUPRC(labels:np.array, predictions:np.array, figsize:tuple, style:str, color_line:str="b", color_ci:str="dodgerblue", n_boot_iters:float or int=5000,
+               alpha:float=0.05, legend_fontsize:int=18, label_fontsize:int=18, ticks_fontsize:int=18,
+               label:str='AUPRC', n_jobs:int=1, ax:plt.axis=None, fig:plt.figure=None):
     """ Plots the AUPRC curve for a given set of labels and predictions.
         Confidence 
     Args:
@@ -110,6 +117,9 @@ def plot_AUPRC(labels:np.array, predictions:np.array, figsize:tuple, style:str, 
         - color_ci (string): Color of the confidence interval (Default:"dodgerblue")
         - n_boot_iters (float or integer): Number of bootstrapped repeats to perform to find the confidence intervals and mean curve. (Default=5000)
         - alpha (float): Significance level. (Default=0.05)
+        - label_fontsize (int): Font size of the labels. (Default=18)
+        - ticks_fontsize (int): Font size of the ticks. (Default=18)
+        - legend_fontsize (int): Font size of the legend. (Default=18)
         - n_jobs (int): Number of treaths/workers to use. (Default=1)
         - fig: Matplotlib figure object. Needed if one wants to plot on top of an existing figure.
         - ax: Axis of the figure object. Needed if one wants to plot on top of an existing figure.
@@ -168,22 +178,22 @@ def plot_AUPRC(labels:np.array, predictions:np.array, figsize:tuple, style:str, 
     # Plotting
     if ax==None:
         fig, ax = plt.subplots(figsize=figsize) 
-        ax.axhline(y=chance_level, xmin=0,xmax=1, linestyle="--", lw=2, color="r", label=r"Chance: %0.3f" % chance_level, alpha=0.8)
-    ax.plot(interp_recalls, interp_precission_estimate, color=color_line,label=r"AUPRC: %0.3f" % AUPRC_estimate,lw=2,alpha=1,)
+        ax.axhline(y=chance_level, xmin=0,xmax=1, linestyle="--", lw=2, color="gray", label=r"Chance: %0.1f" % chance_level, alpha=0.5)
+    ax.plot(interp_recalls, interp_precission_estimate, color=color_line,label=label+r": %0.3f [%0.3f, %0.3f]" % (AUPRC_estimate,lower_ci, upper_ci), lw=2,alpha=1,)
     if style == 'science':
         plt.style.use("science")
-        ax.fill_between(interp_recalls, lower_ci_precission, upper_ci_precission, color=color_ci, alpha=0.3, label=r"%d%s CI: [%0.3f, %0.3f]" % (int((1-alpha)*100),'\%', lower_ci, upper_ci))
+        ax.fill_between(interp_recalls, lower_ci_precission, upper_ci_precission, color=color_ci, alpha=0.15, label='_nolegend_')
     else:
-        ax.fill_between(interp_recalls, lower_ci_precission, upper_ci_precission, color=color_ci, alpha=0.3, label=r"%d%%CI: [%0.3f, %0.3f]" % (int((1-alpha)*100), lower_ci, upper_ci))
+        ax.fill_between(interp_recalls, lower_ci_precission, upper_ci_precission, color=color_ci, alpha=0.15, label='_nolegend_')
     ax.set(
         xlim=[-0.02, 1.02],
         ylim=[-0.02, 1.02],
     )
-    ax.legend(loc="lower right", fontsize=18)
-    ax.set_xlabel('Recall',fontsize=18)
-    ax.set_ylabel('Precision',fontsize=18)
-    ax.xaxis.set_tick_params(labelsize=18)
-    ax.yaxis.set_tick_params(labelsize=18)
+    ax.legend(loc="lower right", fontsize=legend_fontsize)
+    ax.set_xlabel('Recall',fontsize=label_fontsize)
+    ax.set_ylabel('Precision',fontsize=label_fontsize)
+    ax.xaxis.set_tick_params(labelsize=ticks_fontsize)
+    ax.yaxis.set_tick_params(labelsize=ticks_fontsize)
     
     return fig, ax
 
