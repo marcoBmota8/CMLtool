@@ -58,7 +58,7 @@ class GelmanScaler:
         if self.log_indices_ is not None:
        
             if isinstance(X, pd.DataFrame):
-                X = X.applymap(float)  # Correct DataFrames dtype to perform operations with float Series
+                X = X.apply(pd.to_numeric, errors='ignore') # Make sure all data is numeric
                 X.loc[:,self.log_indices_] = np.log(X.loc[:, self.log_indices_]+self.eps_)
             elif isinstance(X, np.ndarray):
                 X[:,self.log_indices_] = np.log(X[:, self.log_indices_]+self.eps_)
@@ -78,22 +78,20 @@ class GelmanScaler:
         
         # Correct DataFrames dtype to perform operations with float Series
         if isinstance(X, pd.DataFrame):
-            X = X.applymap(float)
-    
-        
-        # Keep binary as binary
+            X = X.apply(pd.to_numeric, errors='ignore') # Make sure all data is numeric
+
         if isinstance(X, pd.DataFrame):
             if self.log_indices_ is not None: # Apply logarithm transformation to log indices
                 X.loc[:, self.log_indices_] = np.log(X.loc[:, self.log_indices_] + self.eps_)
             # Rescaling and mean centering
             X_scaled = (X - self.mean_) / self.std_divisor_
-            X_scaled.iloc[:,self.binary_indices_] = X.iloc[:,self.binary_indices_] 
+            X_scaled.iloc[:,self.binary_indices_] = X.iloc[:,self.binary_indices_] # Keep binary as binary
         elif isinstance(X, np.ndarray):
             if self.log_indices_ is not None: # Apply logarithm transformation to log indices
                 X[:, self.log_indices_] = np.log(X[:, self.log_indices_] + self.eps_)
             # Rescaling and mean centering
             X_scaled = (X - self.mean_) / self.std_divisor_
-            X_scaled[:,self.binary_indices_] = X[:,self.binary_indices_] 
+            X_scaled[:,self.binary_indices_] = X[:,self.binary_indices_] # Keep binary as binary
         else:
             raise NotImplementedError("Passed data type not supported.")
 
