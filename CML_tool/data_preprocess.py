@@ -113,7 +113,7 @@ class GelmanScaler:
         if isinstance(X, pd.DataFrame):        
             X_reverted.loc[:, self.log_indices_] =  np.power(10, X_reverted.loc[:,self.log_indices_]) - self.eps_ # Return log transformed columns to its orginal scale
             X_reverted.iloc[:,self.binary_indices_] = X.iloc[:,self.binary_indices_] 
-    elif isinstance(X, np.ndarray):
+        elif isinstance(X, np.ndarray):
             X_reverted[:, self.log_indices_] =  np.power(10, X_reverted[:,self.log_indices_]) - self.eps_ # Return log transformed columns to its orginal scale
             X_reverted[:,self.binary_indices_] = X[:,self.binary_indices_] 
         else:
