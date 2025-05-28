@@ -79,14 +79,20 @@ class GelmanScaler:
         # Correct DataFrames dtype to perform operations with float Series
         if isinstance(X, pd.DataFrame):
             X = X.applymap(float)
- 
-        # Rescaling and mean centering
-        X_scaled = (X - self.mean_) / self.std_divisor_
+    
         
         # Keep binary as binary
         if isinstance(X, pd.DataFrame):
+            if self.log_indices_ is not None: # Apply logarithm transformation to log indices
+                X.loc[:, self.log_indices_] = np.log10(X.loc[:, self.log_indices_] + self.eps_)
+            # Rescaling and mean centering
+            X_scaled = (X - self.mean_) / self.std_divisor_
             X_scaled.iloc[:,self.binary_indices_] = X.iloc[:,self.binary_indices_] 
         elif isinstance(X, np.ndarray):
+            if self.log_indices_ is not None: # Apply logarithm transformation to log indices
+                X[:, self.log_indices_] = np.log10(X[:, self.log_indices_] + self.eps_)
+            # Rescaling and mean centering
+            X_scaled = (X - self.mean_) / self.std_divisor_
             X_scaled[:,self.binary_indices_] = X[:,self.binary_indices_] 
         else:
             raise NotImplementedError("Passed data type not supported.")
