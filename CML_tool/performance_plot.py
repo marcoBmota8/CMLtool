@@ -81,7 +81,7 @@ def plot_AUROC(labels:np.array, predictions:np.array, figsize:tuple, style:str =
     if ax==None:
         fig, ax = plt.subplots(figsize=figsize) 
         ax.plot([0, 1], [0, 1], linestyle="--", lw=2, color="gray", label='_nolegend_', alpha=0.5)
-    ax.plot(interp_fpr, interp_tpr_estimate, color=color_line,label=label+r": %0.3f [%0.3f, %0.3f]" %  (auroc_estimate, lower_ci, upper_ci) ,lw=2,alpha=1,)
+    ax.plot(interp_fpr, interp_tpr_estimate, color=color_line, label=label+r": %0.3f [%0.3f, %0.3f]" %  (auroc_estimate, lower_ci, upper_ci) ,lw=2,alpha=1,)
     if style == 'science':
         plt.style.use("science")
         ax.fill_between(interp_fpr, lower_ci_tpr, upper_ci_tpr, color=color_ci, alpha=0.15, label='_nolegend_')
