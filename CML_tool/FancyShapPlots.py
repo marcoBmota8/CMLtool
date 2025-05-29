@@ -5,10 +5,13 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib.colors import LinearSegmentedColormap
 
 from scipy.interpolate import UnivariateSpline, PchipInterpolator
 from scipy import stats as st
 from scipy.ndimage import gaussian_filter1d
+
+from shap.plots.colors._colorconv import lab2rgb, lch2lab
 
 from CML_tool.ML_Utils import compute_empirical_ci
 
@@ -309,157 +312,69 @@ def scatter_plot(
     else:
         return ax
 
+# Generate a custom colormap for shap (scatter mainly) plots
+def lch2rgb(x):
+    return lab2rgb(lch2lab([[x]]))[0][0]
 
-'''
-# Early version of the scatter_plot function
-def scatter_plot(explanation, feature_idx, feature_names, spline_type='smoothing', sigma=None,
-                   show_scatter=True, show_reg=True, show_ci=True, 
-                   ci_type='bootstrap', significance_level=0.05, n_bootstrap=1000,
-                   show_hist=True, hist_bins=30, alpha=0.6, show=False, **kwargs):
-    """
-    Create an enhanced SHAP dependence plot with histograms and regression line using a SHAP Explainer.
-    
-    Parameters:
-    -----------
-    explanation : shap.Explaination
-        SHAP Explainer object (e.g., TreeExplainer, DeepExplainer)
-    feature_idx : int
-        Feature index
-    feature_names : list
-        List of feature names
-    spline_type: str, default='smoothing'
-        Type of spline to fit ('smoothing' or 'overfitted')
-    show_scatter : bool, default=True
-        Whether to show scatter points
-    show_reg : bool, default=True
-        Whether to show regression line
-    show_ci : bool, default=True
-        Whether to show confidence intervals
-    ci_type : str, default='bootstrap'
-        Type of confidence interval to show ('prediction_error' or 'bootstrap')
-    sigma : float, default=None
-        Standard deviation for Gaussian smoothing (if None, no smoothing is applied)
-        Used to smooth the regression line and confidence intervals for
-        spline_type='overfitted' and ci_type='bootstrap'. Otherwise ignored.
-    significance_level : float, default=0.05
-        Significance level for confidence intervals
-    n_bootstrap : int, default=1000
-        Number of bootstrap samples for confidence intervals.
-        Only used if ci_type is 'bootstrap'.
-    show_hist : bool, default=True
-        Whether to show histograms
-    hist_bins : int, default=30
-        Number of bins for histograms
-    alpha : float, default=0.6
-        Transparency level
-    show : bool
-        Whether ``matplotlib.pyplot.show()`` is called before returning.
-        Setting this to ``False`` (default) allows the plot
-        to be customized further after it has been created.
-    """
-    
-    shap_values = explanation.values[:, feature_idx] if explanation.values.ndim == 2 else explanation.values[:, feature_idx, 1]    
-    feature_vals = explanation.data[:, feature_idx]
-    
-    # Set up figure layout with GridSpec
-    fig = plt.figure(figsize=kwargs.get('figsize', (8, 8)))
-    gs = gridspec.GridSpec(6, 6, figure=fig, wspace=0, hspace=0)
-    
-    # Main scatter plot
-    ax_scatter = fig.add_subplot(gs[1:, :5])
-    
-    # Histograms
-    ax_hist_x = fig.add_subplot(gs[0, 0:5], sharex=ax_scatter)
-    ax_hist_y = fig.add_subplot(gs[1:, 5], sharey=ax_scatter)
-    
-    # Turn off histogram tick labels
-    ax_hist_x.tick_params(axis='x', labelbottom=False)
-    ax_hist_y.tick_params(axis='y', labelleft=False)
-    
-    
-    # Add regression line with confidence intervals
-    if show_reg:
-        # Fit spline and predict values
-        s=kwargs.get('s', len(feature_vals)*0.1)
-        k=kwargs.get('k', 3)
-        resolution=kwargs.get('resolution', 3*len(feature_vals))
-        spline, x_spline_pred, y_pred = fit_univariate_spline(
-            x=feature_vals,
-            y=shap_values,
-            s=s,
-            k=k,
-            resolution=resolution,
-            spline=spline_type
-        ) 
-        
-        # Calculate and plot confidence intervals
-        if show_ci:
-            if ci_type == 'prediction_error':  # Use single spline fit prediction error (Not recommended for most cases, unless one wants to overfit to the data)
-                # Sort the data
-                sorted_idx = np.argsort(feature_vals)
-                x_sorted = feature_vals[sorted_idx]
-                y_sorted = shap_values[sorted_idx]
-                non_nan = ~np.isnan(x_sorted) & ~np.isnan(y_sorted)
-                # Compute confidence intervals
-                residuals = y_sorted[non_nan] - spline(x_sorted[non_nan])
-                sigma = np.std(residuals)
-                ci = st.norm.ppf(1-significance_level) * sigma  # 95% confidence interval
-                low_ci_lim, upper_ci_lim = y_pred - ci, y_pred + ci
-                
-            elif ci_type == 'bootstrap': # Bootstrap approach (Recommended for better trend approximation and accurate confidence intervals)
-                idx_boot = np.sort(np.random.choice(len(feature_vals), size= (n_bootstrap ,len(feature_vals)), replace=True))
-                data_boot = [(feature_vals[idx], shap_values[idx]) for idx in idx_boot]
-                X_splines = np.vstack([fit_univariate_spline(x, y, s=s, k=k, resolution=resolution, spline=spline_type)[2] for (x,y) in data_boot])
-                X_splines = X_splines[~np.isnan(X_splines).any(axis=1)] # drop rows with NaN values
-                low_ci_lim, upper_ci_lim = zip(*compute_empirical_ci(
-                    X=X_splines,
-                    alpha=0.05,
-                    type='quantile'
-                ))
-                del y_pred
-                y_pred = np.median(X_splines, axis=0) # Median of all bootstrap samples
-                
-                if spline_type=='overfitted' and sigma is not None:
-                    low_ci_lim = gaussian_filter1d(low_ci_lim, sigma=sigma)
-                    upper_ci_lim = gaussian_filter1d(upper_ci_lim, sigma=sigma)
-                    y_pred = gaussian_filter1d(y_pred, sigma=sigma)
-                
-            else:
-                raise ValueError("Invalid ci_type. Use `prediction_error` or `bootstrap`.")
-            # Plot confidence intervals
-            ax_scatter.fill_between(x_spline_pred, low_ci_lim, upper_ci_lim, color=kwargs.get('color_ci','lightblue'), alpha=0.25)
+def tighten_gradient_transition(colors, n_points, yellow_rgb, side='left'):
+    n = len(colors)
+    if side == 'left':
+        start_idx = n - n_points
+        for i in range(start_idx, n):
+            alpha = (i - start_idx) / n_points
+            colors[i] = (1 - alpha) * colors[i] + alpha * yellow_rgb
+    else:  # right side
+        for i in range(n_points):
+            alpha = i / n_points
+            colors[i] = (1 - alpha) * yellow_rgb + alpha * colors[i]
+    return colors
 
-        # Plot the fitted spline    
-        ax_scatter.plot(x_spline_pred, y_pred, color=kwargs.get('color_reg', 'C0'), alpha=0.5, linewidth=kwargs.get('linewidth', 2))
-        
-    # Draw scatter plot
-    if show_scatter:
-        ax_scatter.scatter(feature_vals, shap_values, alpha=alpha, edgecolor='none',
-                           color=kwargs.get('color_scatter', 'blue'), s=kwargs.get('marker_size', 8)
-                           )
-        # Set ticklabels size
-        ax_scatter.tick_params(axis='both', which='both', labelsize=kwargs.get('fontsize', 16))
-            
-    # Add histograms
-    if show_hist:
-        ax_hist_x.hist(feature_vals, bins=hist_bins, alpha=1, density=True, color=kwargs.get('color_hist', 'C0'))
-        ax_hist_y.hist(shap_values, bins=hist_bins, alpha=1, orientation='horizontal', density=True, color=kwargs.get('color_hist', 'C0'))
-                
-        # Remove ticks and labels from histograms
-        ax_hist_x.tick_params(axis='both', which='both', labelbottom=False, labelleft=False, bottom=True, top=False, left=False, right=False)
-        ax_hist_y.tick_params(axis='both', which='both', labelbottom=False, labelleft=False, bottom=False, top=False, left=True, right=False)
+def create_red_yellow_blue_colormap(center_width=0.01, nsteps=300, gradient_fraction=0.1):
+    # Define your Lch colors as in your code
+    l_mid = 40.0
+    blue_lch= [35, 60.0, 4.6588]
+    red_lch = [35, 80.0, 0.35470565 + 2 * np.pi]
+    gray_lch = [55.0, 0.0, 0.0]
+    blue_rgb = lch2rgb(blue_lch)
+    red_rgb = lch2rgb(red_lch)
+    gray_rgb = lch2rgb(gray_lch)
+    yellow_rgb = np.array([0.95, 0.95, 0.5])  # yellow
 
-        # Remove spines between plots
-        ax_hist_x.spines['bottom'].set_visible(False)
-    
-    # Labels and titles
-    feature_name = feature_names[feature_idx]
-    ax_scatter.set_xlabel(r"$P(X)$: "+ feature_name, fontsize=kwargs.get('fontsize', 18))
-    ax_scatter.set_ylabel(r"$P(Y|X): $ Shapley value", fontsize=kwargs.get('fontsize', 18))
-    
-    if show:
-        plt.show()
-        return fig, (ax_scatter, ax_hist_x, ax_hist_y)
-    
-    return 
-'''
+    l_vals = list(np.linspace(blue_lch[0], l_mid, nsteps // 2)) + list(np.linspace(l_mid, red_lch[0], nsteps // 2))
+    c_vals = np.linspace(blue_lch[1], red_lch[1], nsteps)
+    h_vals = np.linspace(blue_lch[2], red_lch[2], nsteps)
+    blue_to_red_rgb = np.array([lch2rgb([l, c, h]) for l, c, h in zip(l_vals, c_vals, h_vals)])
+
+    center_start = 0.5 - center_width / 2
+    center_end = 0.5 + center_width / 2
+
+    n_left = int(nsteps * center_start)
+    n_center = max(1, int(nsteps * center_width))
+    n_right = int(nsteps * (1 - center_end))
+
+    left_positions = np.linspace(0, center_start, n_left)
+    left_colors = blue_to_red_rgb[:n_left]
+    left_gradient_points = max(1, int(n_left * gradient_fraction))
+    left_colors = tighten_gradient_transition(left_colors, left_gradient_points, yellow_rgb, 'left')
+
+    center_positions = np.linspace(center_start, center_end, n_center)
+    center_colors = np.tile(yellow_rgb, (n_center, 1))
+
+    right_positions = np.linspace(center_end, 1, n_right)
+    right_colors = blue_to_red_rgb[-n_right:]
+    right_gradient_points = max(1, int(n_right * gradient_fraction))
+    right_colors = tighten_gradient_transition(right_colors, right_gradient_points, yellow_rgb, 'right')
+
+    positions = np.concatenate([left_positions, center_positions, right_positions])
+    colors = np.vstack([left_colors, center_colors, right_colors])
+
+    cmap = LinearSegmentedColormap.from_list("red_yellow_blue", list(zip(positions, colors)))
+    cmap.set_bad(gray_rgb.tolist(), 1.0)
+    cmap.set_over(gray_rgb.tolist(), 1.0)
+    cmap.set_under(gray_rgb.tolist(), 1.0)
+
+    return cmap
+
+# custom colormap
+red_blue_yellow_tight = create_red_yellow_blue_colormap(center_width=0.01, nsteps=256, gradient_fraction=0.1)
+       
