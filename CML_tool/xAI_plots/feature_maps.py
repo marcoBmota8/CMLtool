@@ -161,18 +161,3 @@ race_cohort_map = {
         '#5e5b5e'
         ),
 }
-
-#  # %%
-# from CML_tool.Utils import look_up_description
-# from CML_tool.Utils import read_pickle
-
-
-# meta_df = read_pickle('/home/barbem4/projects/Data/Initial Data' , 'meta.pkl')
-
-# # %%
-# df = look_up_description(
-#     meta_df,
-#     description='Degenerative joint disease involving'
-#     )
-# df.description.item()
-# %%
