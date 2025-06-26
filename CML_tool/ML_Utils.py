@@ -195,7 +195,7 @@ def compute_skewness(X:np.array, indices:np.array=slice(None), significant_filte
         a = X[indices, :],
         nan_policy='omit',
         bias=False,
-        keepdims=False,
+        # keepdims=False,
         axis=0
         )
     
@@ -205,7 +205,7 @@ def compute_skewness(X:np.array, indices:np.array=slice(None), significant_filte
             axis=0,
             nan_policy='omit',
             alternative='two-sided',
-            keepdims=False
+            # keepdims=False
             )[1]
         
         fp_coeff = [val if (pvalues[i]>=alpha) else 0 for i, val in enumerate(fp_coeff)]
@@ -214,8 +214,13 @@ def compute_skewness(X:np.array, indices:np.array=slice(None), significant_filte
 
 def compute_1dkde_curve(x, x_grid, bandwidth, kernel='gaussian'):
     
-    assert x_grid.ndim == 1, f"Wrong `x_grid` shape, got {x_grid.shape}"    
-    assert x.ndim == 1, f"Wrong `x` shape, got {x.shape}"    
+    if x_grid.shape[1]==1:
+        x_grid = x_grid.flatten()
+    if x.shape[1]==1:
+        x = x.flatten()
+    
+    assert x.ndim == 1, 'Input x must be a 1D array.'
+    assert x_grid.ndim == 1, 'Input x_grid must be a 1D array.'
     
     kde = KernelDensity(kernel=kernel, bandwidth=bandwidth)
     kde.fit(x[:,None])
