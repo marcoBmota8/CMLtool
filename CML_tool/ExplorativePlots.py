@@ -4,6 +4,11 @@ import matplotlib.gridspec as gridspec
 import numpy as np
 from sklearn.neighbors import KernelDensity
 
+# TODO modify this function so that it takes a list of arrays and its corresponding list of string names
+# It would make it easier to pass different sets of data of different lengths. The current approach of a dataframe
+# as input requires to transform each array into a pandas series before make it a dataframe column so that NaN padding 
+# is applied to all arrays. This is not necessary if we just pass a list of arrays.
+
 def kde_rugplot_multivar(
     df,
     kernel='gaussian', 
@@ -99,9 +104,8 @@ def kde_rugplot_multivar(
     ax_kde.tick_params(axis='both', which='both', bottom=False, labelbottom=False, labelsize=label_fontsize)
     ax_kde.set_ylabel(ylabel, fontsize=kde_ylabel_fontsize)
     ax_kde.legend(fontsize=legend_fontsize)
-    
+    plt.tight_layout()
     if show:
-        plt.tight_layout()
         plt.show()
     else:
         plt.close()
