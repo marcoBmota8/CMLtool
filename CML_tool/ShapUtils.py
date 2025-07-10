@@ -49,7 +49,7 @@ def calculate_shap_values(
             'identity' (no-op link function, for binary classification this keeps Shapley values as probability) or 
             'logit' (with binary classification models this option expresses each feature Shapley value as log-odds) 
             (Default: 'identity') -> str
-        -feature_perturbation: 'interventional' or 'observational'. Whether to 
+        -feature_perturbation: 'interventional_independent', 'interventional_correlation', or 'observational'. Whether to 
             consider features 'interventional' (computes SHAP values as the unconditional expectation via 
             Shapley sampling values method enumerating all coalitions. This is the correct way to 
             compute the marginal contribution of a feature to a model prediction from a causal perspective 
@@ -339,15 +339,14 @@ def CI_shap(
     '''
     
     assert return_mav!=return_samples, 'Cannot return both mean absolute values and the full samples matrix'
-
-    assert isinstance(background_data, np.ndarray), '`background_data` must be a numpy array.'
-    assert isinstance(training_outcome, np.ndarray), '`training_outcome` must be a numpy array.'
+    if 'interventional' in feature_perturbation:
+        assert isinstance(background_data, np.ndarray), '`background_data` must be a numpy array.'
+        assert isinstance(training_outcome, np.ndarray), '`training_outcome` must be a numpy array.'
+    
     assert isinstance(test_data, np.ndarray), '`test_data` must be a numpy array.'
     
-    assert np.array_equal(test_outcomes, test_outcomes.astype(bool).astype(float)), '`test_outcomes` array is not binary.'
+    assert np.array_equal(test_outcomes, test_outcomes.astype(bool).astype(float)), '`test_outcomes` array is not binary. This function is only meant for binary classification problems.'
     
-
-
     # Calculate point estimates Shapley values on test data
     point_estimates, explainer = calculate_shap_values(
             model = model,
