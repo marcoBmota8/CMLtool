@@ -138,8 +138,8 @@ def ci_proportion(numerator, denominator,alpha):
 
 def bootstrap_matrix(matrix, n_bootstraps=1000, random_state=None):
     """
-    Perform bootstrap sampling on matrix rows and stack results along a third axis
-    to form the resulting matrix
+    Perform bootstrap sampling on matrix rows and stack results along a final 
+    additional axis to form the resulting matrix
     
     Parameters:
     -----------
@@ -162,7 +162,7 @@ def bootstrap_matrix(matrix, n_bootstraps=1000, random_state=None):
     # Perform bootstrap sampling
     for i in range(n_bootstraps):
         # Resample rows with replacement
-        bootstrapped_matrices[:,:,i] = resample(matrix, 
+        bootstrapped_matrices[...,i] = resample(matrix, 
                                             replace=True, 
                                             n_samples=matrix.shape[0],
                                             random_state=random_state)
