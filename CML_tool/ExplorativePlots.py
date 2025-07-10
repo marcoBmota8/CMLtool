@@ -11,21 +11,32 @@ from sklearn.neighbors import KernelDensity
 
 def kde_rugplot_multivar(
     df,
-    kernel='gaussian', 
-    bandwidth=0.75,
-    ext_perc=10,
     figsize=(8, 6),
-    kde_alpha=1,
-    kde_linewidth=2,
-    rug_height=0.5,
-    rug_alpha=0.33,
-    rug_lw=1.5,
+    kde_kwargs={
+        'kernel': 'gaussian',
+        'bandwidth': 0.75,
+        'alpha': 1,
+        'linewidth': 2
+        },
+    rug_kwargs={
+        'height':0.5,
+        'alpha':0.33,
+        'lw':1.5,
+        },
     palette=None,
     ylabel='KDE Density',
-    xlabel=None,
-    legend_fontsize=15,
+    xlabel='Observations',
+    legend_kwargs={
+        'fontisize':15,
+        'loc':'upper left',
+        'bbox_to_anchor':(1.05, 1),
+        'ncol':1
+    },
     label_fontsize=18,
     kde_ylabel_fontsize=22,
+    ylim=None,
+    xlim=None,
+    ext_perc=10,
     sharex=True,
     show=False
 ):
@@ -55,14 +66,14 @@ def kde_rugplot_multivar(
         data = df[col].dropna().values[:, np.newaxis]
         x_grid = np.linspace(data_min, data_max, 500)[:, np.newaxis]
 
-        kde = KernelDensity(kernel=kernel, bandwidth=bandwidth).fit(data)
+        kde = KernelDensity(kernel=kde_kwargs['kernel'], bandwidth=kde_kwargs['bandwidth']).fit(data)
         log_density = kde.score_samples(x_grid)
         ax_kde.plot(
             x_grid[:, 0], np.exp(log_density),
             label=col,
             color=color,
-            alpha=kde_alpha,
-            linewidth=kde_linewidth,
+            alpha=kde_kwargs['alpha'],
+            linewidth=kde_kwargs['linewidth'],
         )
 
         ax_rug = fig.add_subplot(gs[i+1], sharex=ax_kde if sharex else None)
@@ -70,9 +81,9 @@ def kde_rugplot_multivar(
             df[col].dropna(),
             ax=ax_rug,
             color=color,
-            height=rug_height,
-            alpha=rug_alpha,
-            lw=rug_lw,
+            height=rug_kwargs['height'],
+            alpha=rug_kwargs['alpha'],
+            lw=rug_kwargs['lw'],
             clip_on=False
         )
         ax_rug.set_yticks([])
@@ -100,10 +111,15 @@ def kde_rugplot_multivar(
             ax_rug.tick_params(axis='y', which='both', labelbottom=False, bottom=False, labelleft=False, left=False)
             ax_rug.set_xlabel(xlabel, fontsize=label_fontsize)
 
-    ax_kde.set_ylim([0, ax_kde.get_ylim()[1]])
+    if ylim is None:
+        ylim = (0, ax_kde.get_ylim()[1])
+    ax_kde.set_ylim(ylim)
+    if xlim is None:
+        xlim = (data_min, data_max)
+    ax_kde.set_xlim(xlim)
     ax_kde.tick_params(axis='both', which='both', bottom=False, labelbottom=False, labelsize=label_fontsize)
     ax_kde.set_ylabel(ylabel, fontsize=kde_ylabel_fontsize)
-    ax_kde.legend(fontsize=legend_fontsize)
+    ax_kde.legend(**legend_kwargs)
     plt.tight_layout()
     if show:
         plt.show()
