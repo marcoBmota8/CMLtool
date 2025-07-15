@@ -10,7 +10,7 @@ from sklearn.neighbors import KernelDensity
 # is applied to all arrays. This is not necessary if we just pass a list of arrays.
 
 def kde_rugplot_multivar(
-    df,
+    input_data: dict or pd.DataFrame,
     figsize=(8, 6),
     kde_kwargs=None,
     rug_kwargs=None,
@@ -32,6 +32,19 @@ def kde_rugplot_multivar(
     and a rugplot for each variable on a separate horizontal axis.
     Supports 'gaussian' and 'tophat' (Kirchhoff) kernels.
     """
+    
+    # check the format of the input data and preprocess it addequately
+    # Find max length
+    if isinstance(input_data, dict):
+        max_len = max(len(arr) for arr in input_data.values())
+        # Pad arrays and create DataFrame
+        padded_data = {k: pd.Series(v).reindex(range(max_len)) for k, v in input_data.items()}
+        df = pd.DataFrame(padded_data)
+        del input_data  # Remove the original dictionary to free up memory
+    elif isinstance(input_data, pd.DataFrame):
+        df = input_data
+    else:
+        raise ValueError("Input data must be a pandas DataFrame or a dictionary of arrays.")
     
     # Set dirtionary arguments defaults if not supplied
     rug_params = {
