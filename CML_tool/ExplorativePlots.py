@@ -12,26 +12,13 @@ from sklearn.neighbors import KernelDensity
 def kde_rugplot_multivar(
     df,
     figsize=(8, 6),
-    kde_kwargs={
-        'kernel': 'gaussian',
-        'bandwidth': 0.75,
-        'alpha': 1,
-        'linewidth': 2
-        },
-    rug_kwargs={
-        'height':0.5,
-        'alpha':0.33,
-        'lw':1.5,
-        },
+    kde_kwargs=None,
+    rug_kwargs=None,
     palette=None,
     ylabel='KDE Density',
     xlabel='Observations',
-    legend_kwargs={
-        'fontisize':15,
-        'loc':'upper left',
-        'bbox_to_anchor':(1.05, 1),
-        'ncol':1
-    },
+    title=None,
+    legend_kwargs=None,
     label_fontsize=18,
     kde_ylabel_fontsize=22,
     ylim=None,
@@ -45,6 +32,37 @@ def kde_rugplot_multivar(
     and a rugplot for each variable on a separate horizontal axis.
     Supports 'gaussian' and 'tophat' (Kirchhoff) kernels.
     """
+    
+    # Set dirtionary arguments defaults if not supplied
+    rug_params = {
+        'height':0.5,
+        'alpha':0.33,
+        'lw':1.5,
+        }
+    kde_params = {
+        'kernel': 'gaussian',
+        'bandwidth': 0.75,
+        'alpha': 1,
+        'linewidth': 2
+    }
+    legend_params ={
+        'title': None,
+        'title_fontsize': 15,
+        'fontsize':13,
+        'loc':'upper left',
+        'bbox_to_anchor':None,
+        'ncol':1
+    }
+    
+    # Make updates if some parameters are provided
+    if kde_kwargs is not None:
+        kde_params.update(kde_kwargs)
+    if rug_kwargs is not None:
+        rug_params.update(rug_kwargs)
+    if legend_kwargs is not None:
+        legend_params.update(legend_kwargs) 
+    
+    
     n_vars = df.shape[1]
     fig = plt.figure(figsize=figsize)
     gs = gridspec.GridSpec(n_vars + 1, 1, height_ratios=[8] + [0.25]*n_vars, hspace=0)
@@ -66,14 +84,14 @@ def kde_rugplot_multivar(
         data = df[col].dropna().values[:, np.newaxis]
         x_grid = np.linspace(data_min, data_max, 500)[:, np.newaxis]
 
-        kde = KernelDensity(kernel=kde_kwargs['kernel'], bandwidth=kde_kwargs['bandwidth']).fit(data)
+        kde = KernelDensity(kernel=kde_params['kernel'], bandwidth=kde_params['bandwidth']).fit(data)
         log_density = kde.score_samples(x_grid)
         ax_kde.plot(
             x_grid[:, 0], np.exp(log_density),
             label=col,
             color=color,
-            alpha=kde_kwargs['alpha'],
-            linewidth=kde_kwargs['linewidth'],
+            alpha=kde_params['alpha'],
+            linewidth=kde_params['linewidth'],
         )
 
         ax_rug = fig.add_subplot(gs[i+1], sharex=ax_kde if sharex else None)
@@ -81,9 +99,9 @@ def kde_rugplot_multivar(
             df[col].dropna(),
             ax=ax_rug,
             color=color,
-            height=rug_kwargs['height'],
-            alpha=rug_kwargs['alpha'],
-            lw=rug_kwargs['lw'],
+            height=rug_params['height'],
+            alpha=rug_params['alpha'],
+            lw=rug_params['lw'],
             clip_on=False
         )
         ax_rug.set_yticks([])
@@ -117,9 +135,14 @@ def kde_rugplot_multivar(
     if xlim is None:
         xlim = (data_min, data_max)
     ax_kde.set_xlim(xlim)
+    
     ax_kde.tick_params(axis='both', which='both', bottom=False, labelbottom=False, labelsize=label_fontsize)
+    if title is not None:
+        ax_kde.set_title(title, fontsize=label_fontsize)
     ax_kde.set_ylabel(ylabel, fontsize=kde_ylabel_fontsize)
-    ax_kde.legend(**legend_kwargs)
+    ax_kde.legend(**legend_params)
+    
+    
     plt.tight_layout()
     if show:
         plt.show()
