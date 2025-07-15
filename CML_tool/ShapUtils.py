@@ -75,10 +75,11 @@ def calculate_shap_values(
               this approach is that it will never give credit to features that are not used by the model but that
               are correlated with (at least one) that are. This option uses the Independent masker.
 
-        -n_samples: Only useful for feature_perturbation = 'observational'. Number of samples to use when estimating
+        -n_samples: Only useful for feature_perturbation = 'observational' in the linear explainer. Number of samples to use when estimating
             the transformation matrix used to account for feature correlations. (Default:1000) -> int
         -max_samples: The maximum number of samples to use from the passed background data in the independent masker. 
-            (Default:1000) -> int
+            Use `None` to use the full dataset.
+            (Default:1000) -> int or None
         -retrieve_explainer: Whether to return the explainer object used to compute the Shapley values.
             (Default: True) -> bool
         -retrieve_interactions: Whether to return the interactions matrix instead of shapley values.
@@ -124,7 +125,7 @@ def calculate_shap_values(
 
         masker = Independent(
             data = background_data,
-            max_samples = max_samples
+            max_samples = max_samples if max_samples is not None else background_data.shape[0]
         )
         
     elif feature_perturbation == 'interventional_correlation':
@@ -132,7 +133,7 @@ def calculate_shap_values(
         masker = Partition(
             data = background_data,
             clustering = 'correlation',
-            max_samples = max_samples
+            max_samples = max_samples if max_samples is not None else background_data.shape[0]
         )
     elif feature_perturbation == 'observational':
         masker = Impute(
@@ -292,7 +293,7 @@ def CI_shap(
         max_samples = 1000,
         ci_type=None,
         return_samples=False,
-        return_mav=True,
+        return_agg=True,
         retrieve_interactions=False
         ):
     '''
@@ -322,12 +323,14 @@ def CI_shap(
             (Default: 'identity') -> str
         -feature_perturbation: 'interventional_independent', 'interventional_correlation' or 'observational'. For explanation see calculate_shap_values docstring.
             (Default: 'interventional_independent') -> str
-        -n_samples: Only useful for feature_perturbation = 'observational'. Number of samples to use when estimating the transformation matrix used 
+        -n_samples: Only useful for feature_perturbation = 'observational' in linear explainer. Number of samples to use when estimating the transformation matrix used 
             to account for feature correlations. (Default:1000) -> int
-        -max_samples: The maximum number of samples to use from the passed background data in the independent masker. (Default:1000) -> int
+        -max_samples: The maximum number of samples to use from the passed background data in the independent masker. 
+            Use `None` to use the full dataset. (Default:1000) -> int or None
         -ci_type: What confidence interval to compute from the empirical distribution: `pivot` or `quantile` based. Default is to not return neither (Default: None)
         -return_samples: Whether or not to return the full samples matrix.(Default: False).
-        -return_mav: Whather or not to return mean absolute value shap values across the set instances, e.g. patients. (Default: True)
+        -return_agg: Whather or not to return aggregations of shapley values (mav) or shapley interaction values (main and total indirect effetcs) across the set instances,
+            e.g. patients. (Default: True)
         -retrieve_interactions: Whether to return the interactions matrix instead of shapley values. Only possible for explainer_type='tree'.
         
     -Returns:
@@ -422,12 +425,27 @@ def CI_shap(
             type=ci_type
         ))
 
-    if return_mav:
-        return {
-            'point_estimates' : point_estimates,
-            'explainer': explainer,
-            'shaps': np.mean(abs(shap_values_samples), axis=0).T
-        }
+    if return_agg:
+        if not retrieve_interactions:
+            # Return mean absolute values of the Shapley samples
+            return {
+                'point_estimates' : point_estimates,
+                'explainer': explainer,
+                'shaps': np.mean(abs(shap_values_samples), axis=0).T
+            }
+        elif retrieve_interactions:
+            # Return direct and indirect effects
+            main_effects, indirect_effects = get_main_interaction_effects(
+                shap_int=shap_values_samples,
+                total_split_effects=True,
+                mav_indirect=False
+            )
+            return {
+                'point_estimates' : point_estimates,
+                'direct_effects': main_effects, 
+                'indirect_effects': indirect_effects, 
+                'explainer': explainer,
+            }
     elif return_samples:
         if ci_type is None:
             return {
@@ -450,3 +468,25 @@ def CI_shap(
             'point_estimates': point_estimates,
             'explainer': explainer
         }
+        
+def get_main_interaction_effects(shap_int:np.ndarray, total_split_effects:bool=True, mav_indirect:bool=False):
+    
+    assert total_split_effects != mav_indirect, 'Either total_split_effects or mav_indirect must be True, but not both.'
+    
+    n,p,p = shap_int.shape
+    
+    # direct effects
+    main_effects = np.diagonal(shap_int, axis1=1, axis2=2)
+    # indirect effects
+    mask = ~np.eye(p, dtype=bool)
+    off_diagonals = shap_int[:, mask].reshape(n,p-1,p, order='F') # Fortran order (rows reading slower than columns) to avoid mixing off diagonal elements from different features in the reduced matrix
+    
+    if total_split_effects: # Get the total indirect effects per feature and instance considering signs
+        ind_effects=off_diagonals.sum(axis=1)
+        return main_effects, ind_effects
+    elif mav_indirect: # Get the mean absolute value of the indirect effects per feature and instance
+        ind_effects = np.mean(abs(off_diagonals), axis=1)
+        return main_effects, ind_effects
+    else:
+        raise ValueError('Either total_split_effects or mav_indirect must be True.')
+        
