@@ -213,12 +213,13 @@ def compute_skewness(X:np.array, indices:np.array=slice(None), significant_filte
     return fp_coeff
 
 def compute_1dkde_curve(x, x_grid, bandwidth, kernel='gaussian'):
-    
-    if x_grid.shape[1]==1:
-        x_grid = x_grid.flatten()
-    if x.shape[1]==1:
-        x = x.flatten()
-    
+    if x_grid.ndim > 1:
+        if x_grid.shape[1]==1:
+            x_grid = x_grid.flatten()
+    if x.ndim > 1:
+        if x.shape[1]==1:
+            x = x.flatten()
+
     assert x.ndim == 1, 'Input x must be a 1D array.'
     assert x_grid.ndim == 1, 'Input x_grid must be a 1D array.'
     
@@ -226,3 +227,8 @@ def compute_1dkde_curve(x, x_grid, bandwidth, kernel='gaussian'):
     kde.fit(x[:,None])
     logprob = kde.score_samples(x_grid[:,None])
     return np.exp(logprob)
+
+def flip_labels(labels, p):
+    """Flip each label in a numpy array with probability p."""
+    flip_mask = np.random.rand(len(labels)) < p
+    return np.where(flip_mask, 1 - labels, labels)
