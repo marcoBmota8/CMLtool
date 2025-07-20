@@ -471,8 +471,6 @@ def CI_shap(
         
 def get_main_interaction_effects(shap_int:np.ndarray, total_split_effects:bool=True, mav_indirect:bool=False):
     
-    assert total_split_effects != mav_indirect, 'Either total_split_effects or mav_indirect must be True, but not both.'
-    
     n,p,p = shap_int.shape
     
     # direct effects
@@ -488,5 +486,9 @@ def get_main_interaction_effects(shap_int:np.ndarray, total_split_effects:bool=T
         ind_effects = np.mean(abs(off_diagonals), axis=1)
         return main_effects, ind_effects
     else:
-        raise ValueError('Either total_split_effects or mav_indirect must be True.')
+        raise ValueError('''
+                         Either total_split_effects or mav_indirect must be True. 
+                         Alternatively, set them both to False if no aggregation is desired. This option returns the separation into main and indirect effects but is highly memory hungry.
+                         '''
+                         )
         
