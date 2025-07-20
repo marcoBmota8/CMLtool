@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.gridspec as gridspec
 import numpy as np
+import pandas as pd
 from sklearn.neighbors import KernelDensity
 
 # TODO modify this function so that it takes a list of arrays and its corresponding list of string names
@@ -46,7 +47,7 @@ def kde_rugplot_multivar(
     else:
         raise ValueError("Input data must be a pandas DataFrame or a dictionary of arrays.")
     
-    # Set dirtionary arguments defaults if not supplied
+    # Set dictionary arguments defaults if not supplied
     rug_params = {
         'height':0.5,
         'alpha':0.33,
