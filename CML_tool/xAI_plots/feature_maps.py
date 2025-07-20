@@ -127,7 +127,8 @@ SLE_2021 = {
         "S-1013": "Hypothyroidism",
         "S-1638": "Asthenia",
         "S-239": "Neoplasm of uncertain behavior of skin",
-        "S-378": "Elevated ferritin"
+        "S-378": "Elevated ferritin",
+        "S-1245":"Elevated likelihood of `Black` vs. `White` recorded race"
         },
 
     'CHANNELS_MAP' : { # Mapping to for better strigns for each feature
