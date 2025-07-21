@@ -25,7 +25,8 @@ def calculate_shap_values(
         n_samples = 1000,
         max_samples = 1000,
         retrieve_explainer = True,
-        retrieve_interactions = False
+        retrieve_interactions = False,
+        **kwargs
         
         ):
     '''
@@ -294,7 +295,8 @@ def CI_shap(
         ci_type=None,
         return_samples=False,
         return_agg=True,
-        retrieve_interactions=False
+        retrieve_interactions=False,
+        **kwargs
         ):
     '''
     Compute empirical variability and confidence intervals of Shapley values. 
