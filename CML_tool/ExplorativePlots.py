@@ -11,7 +11,7 @@ from sklearn.neighbors import KernelDensity
 # is applied to all arrays. This is not necessary if we just pass a list of arrays.
 
 def kde_rugplot_multivar(
-    input_data: dict or pd.DataFrame,
+    input_data: dict or pd.DataFrame or np.array,
     figsize=(8, 6),
     kde_kwargs=None,
     rug_kwargs=None,
@@ -19,6 +19,7 @@ def kde_rugplot_multivar(
     ylabel='KDE Density',
     xlabel='Observations',
     title=None,
+    legend=True,
     legend_kwargs=None,
     label_fontsize=18,
     kde_ylabel_fontsize=22,
@@ -44,6 +45,13 @@ def kde_rugplot_multivar(
         del input_data  # Remove the original dictionary to free up memory
     elif isinstance(input_data, pd.DataFrame):
         df = input_data
+    elif isinstance(input_data, np.ndarray):
+        if input_data.ndim == 1:
+            df = pd.DataFrame(input_data, columns=['Variable'])
+        elif input_data.ndim == 2:
+            df = pd.DataFrame(input_data, columns=[f"Var{i}" for i in range(input_data.shape[1])])
+        else:
+            raise ValueError("Input numpy array must be 1D or 2D.")
     else:
         raise ValueError("Input data must be a pandas DataFrame or a dictionary of arrays.")
     
@@ -154,9 +162,9 @@ def kde_rugplot_multivar(
     if title is not None:
         ax_kde.set_title(title, fontsize=label_fontsize)
     ax_kde.set_ylabel(ylabel, fontsize=kde_ylabel_fontsize)
-    ax_kde.legend(**legend_params)
-    
-    
+    if legend:
+        ax_kde.legend(**legend_params)
+
     plt.tight_layout()
     if show:
         plt.show()
