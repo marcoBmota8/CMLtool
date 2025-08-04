@@ -2,10 +2,11 @@
 import warnings
 import logging
 
-from joblib import Parallel, delayed
 import numpy as np
-from tqdm import tqdm
 
+from sklearn.utils.validation import check_is_fitted
+from joblib import Parallel, delayed
+from tqdm import tqdm
 from shap.maskers import Independent, Partition, Impute
 from shap.explainers import Linear, Exact, Tree, GPUTree
 from shap.links import logit, identity
@@ -16,13 +17,13 @@ from CML_tool.ML_Utils import compute_empirical_ci, bootstrap_matrix
 def calculate_shap_values(
         model,
         background_data,
+        training_data,
         training_outcome,
         test_data,
         pretrained = False,
         explainer_type = None,
         link_function = None,
         feature_perturbation = 'interventional_independent',
-        n_samples = 1000,
         max_samples = 1000,
         retrieve_explainer = True,
         retrieve_interactions = False,
@@ -37,8 +38,9 @@ def calculate_shap_values(
     Args:
         -model: model instance (sklearn object) or tuple (coefficients, intercept) for linear models (this requires
         that explainer_type = 'linear').
-        -background_data: training data used to compute its mean and covariance which
-        in turn are used to compute conditional expectations -> numpy.array 
+        -background_data: Data used to compute mean and covariance for marginal expectations estimations in marginal
+            Shapley Values formula.  -> numpy.array
+        -training_data: Data used to train the model. This is only used if pretrained=False. -> numpy.array
         -training_outcome: labels or target values for the training instances. -> numpy.array
         -test_data: Data for which predictions shapley values are calculated. -> numpy.array
         -pretrained: Boolean indicating whether the passed model object is already trained on the
@@ -75,12 +77,8 @@ def calculate_shap_values(
               credit for a prediction is only given to the features the model actually uses. The benefit of
               this approach is that it will never give credit to features that are not used by the model but that
               are correlated with (at least one) that are. This option uses the Independent masker.
-
-        -n_samples: Only useful for feature_perturbation = 'observational' in the linear explainer. Number of samples to use when estimating
-            the transformation matrix used to account for feature correlations. (Default:1000) -> int
-        -max_samples: The maximum number of samples to use from the passed background data in the independent masker. 
-            Use `None` to use the full dataset.
-            (Default:1000) -> int or None
+        -max_samples: The maximum number of samples to use from the passed background data to account for correlations. Used in the Independent masker 
+            and Linear explainer. Use `None` to use the full dataset. (Default:1000) -> int or None
         -retrieve_explainer: Whether to return the explainer object used to compute the Shapley values.
             (Default: True) -> bool
         -retrieve_interactions: Whether to return the interactions matrix instead of shapley values.
@@ -99,17 +97,16 @@ def calculate_shap_values(
         link_function_func = logit
     else:
         raise ValueError("""Wrong link function. Select between identity and logit carefully depending on your model.
-                         Note: for logistic regression identity gives probability and logot log-odds.
+                         Note: for logistic regression identity gives probability and logit log-odds.
                          """)
     
-    # Train or use pretrained model
-    if not pretrained:
-        model.fit(background_data,training_outcome)
-    elif pretrained:
-        pass
+    #Assert that the model is fitted if pretrained is True
+    if pretrained:
+        check_is_fitted(model, msg="Passed model object has not been fitted yet and `pretrained` is set to True.")
     else:
-        raise ValueError('Model pretrainined status mispeified.')
-
+    # Train model with passed data
+        model.fit(training_data,training_outcome)
+        
     #Get prediction method from model and model type
     if hasattr(model, 'predict_proba'): # Classifiers
         prediction_function = model.predict_proba
@@ -119,8 +116,8 @@ def calculate_shap_values(
         model_type = 'regressor'
     else:
         raise ValueError(f"Model does not have either predict or predict_proba method.\
-                        Check that the model object you are passing is correct.")
-    
+                        Check that the model object you are passing is compatible with the sklearn API.")
+
     # Define the masker based on the feature perturbation
     if feature_perturbation == 'interventional_independent':
 
@@ -138,7 +135,8 @@ def calculate_shap_values(
         )
     elif feature_perturbation == 'observational':
         masker = Impute(
-            data = background_data
+            data = background_data,
+            method='linear'
         )
         
     else:
@@ -153,7 +151,7 @@ def calculate_shap_values(
             masker = masker if 'interventional' in feature_perturbation else masker,
             feature_perturbation = "correlation_dependent" if feature_perturbation == 'observational' else feature_perturbation,
             link = link_function_func,
-            nsamples = n_samples,
+            nsamples = max_samples if max_samples is not None else background_data.shape[0],
             disable_completion_bar = True
         )
         
@@ -280,9 +278,11 @@ def calculate_shap_values(
 def CI_shap(
         model,
         background_data,
+        training_data,
         training_outcome,
         test_data,
         test_outcomes,
+        pretrained = False,
         randomness_distortion="bootstrapping_test_set",
         n_jobs = 1,
         MC_repeats = 1000,
@@ -290,7 +290,6 @@ def CI_shap(
         explainer_type = None,
         link_function = 'identity',
         feature_perturbation = 'interventional_independent',
-        n_samples = 1000,
         max_samples = 1000,
         ci_type=None,
         return_samples=False,
@@ -307,9 +306,12 @@ def CI_shap(
         -model: model instance -> sklearn object
          -background_data: training data used to compute its mean and covariance which
         in turn are used to compute conditional expectations -> numpy.array 
+        -training_data: Data used to train the model ... -> numpy.array
         -training_outcome: labels or target values for the training instances. -> numpy.array
         -test_data: Data for which predictions shapley values are calculated. -> numpy.array
         -test_outcome: labels or target values for the test instances. -> numpy.array
+        -pretrained: Boolean indicating whether the passed model object is already trained. 
+            This is passed to calculate_shap_values to estimate Shapley Values point estimates. -> bool
         - randomness_distortion: Whether to compute CIs based on boostrapped samples of the training data ("bootstrapping_train_data"),
             different randon seeds of the model during training on the full datatset ("seeds"),
             or bootstrapped reapeats of the test set ("bootstrapping_test_set")-> str (Default:"bootstrapping_test_set")
@@ -325,13 +327,11 @@ def CI_shap(
             (Default: 'identity') -> str
         -feature_perturbation: 'interventional_independent', 'interventional_correlation' or 'observational'. For explanation see calculate_shap_values docstring.
             (Default: 'interventional_independent') -> str
-        -n_samples: Only useful for feature_perturbation = 'observational' in linear explainer. Number of samples to use when estimating the transformation matrix used 
-            to account for feature correlations. (Default:1000) -> int
-        -max_samples: The maximum number of samples to use from the passed background data in the independent masker. 
-            Use `None` to use the full dataset. (Default:1000) -> int or None
+        -max_samples: The maximum number of samples to use from the passed background data to account for correlations. Used in the Independent masker 
+            and Linear explainer. Use `None` to use the full dataset. (Default:1000) -> int or None
         -ci_type: What confidence interval to compute from the empirical distribution: `pivot` or `quantile` based. Default is to not return neither (Default: None)
         -return_samples: Whether or not to return the full samples matrix.(Default: False).
-        -return_agg: Whather or not to return aggregations of shapley values (mav) or shapley interaction values (main and total indirect effetcs) across the set instances,
+        -return_agg: Whether or not to return aggregations of shapley values (mav) or shapley interaction values (main and total indirect effects) across the set instances,
             e.g. patients. (Default: True)
         -retrieve_interactions: Whether to return the interactions matrix instead of shapley values. Only possible for explainer_type='tree'.
         
@@ -343,7 +343,7 @@ def CI_shap(
 
     '''
     
-    assert return_mav!=return_samples, 'Cannot return both mean absolute values and the full samples matrix'
+    assert return_agg!=return_samples, 'Cannot return both mean absolute values and the full samples matrix'
     if 'interventional' in feature_perturbation:
         assert isinstance(background_data, np.ndarray), '`background_data` must be a numpy array.'
         assert isinstance(training_outcome, np.ndarray), '`training_outcome` must be a numpy array.'
@@ -356,13 +356,13 @@ def CI_shap(
     point_estimates, explainer = calculate_shap_values(
             model = model,
             background_data = background_data,
+            training_data= training_data,
             training_outcome = training_outcome,
-            pretrained=False,
+            pretrained=pretrained,
             test_data=test_data,
             explainer_type=explainer_type,
             link_function=link_function,
             feature_perturbation=feature_perturbation,
-            n_samples=n_samples,
             max_samples=max_samples,
             retrieve_explainer=True,
             retrieve_interactions=retrieve_interactions
@@ -372,14 +372,14 @@ def CI_shap(
         # Estimate confidence intervals through Monte Carlo sampling via bootstrapped samples of the training dataset
         shap_values_samples = Parallel(n_jobs=n_jobs)(delayed(calculate_shap_values)(
             model = model,
-            background_data = background_data[idx,:],
+            background_data = background_data,
+            training_data = training_data[idx, :],
             training_outcome = training_outcome[idx],
             pretrained=False,
             test_data=test_data,
             explainer_type=explainer_type,
             link_function=link_function,
             feature_perturbation=feature_perturbation,
-            n_samples=n_samples,
             max_samples=max_samples,
             retrieve_explainer=False,
             retrieve_interactions=retrieve_interactions
@@ -394,13 +394,13 @@ def CI_shap(
         shap_values_samples = Parallel(n_jobs=n_jobs)(delayed(calculate_shap_values)(
             model = model.set_params(**{'random_state':seed}),
             background_data = background_data,
+            training_data = training_data,
             training_outcome = training_outcome,
             pretrained=False,
             test_data=test_data,
             explainer_type=explainer_type,
             link_function=link_function,
             feature_perturbation=feature_perturbation,
-            n_samples=n_samples,
             max_samples=max_samples,
             retrieve_explainer=False,
             retrieve_interactions=retrieve_interactions
