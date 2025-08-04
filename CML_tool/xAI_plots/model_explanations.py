@@ -9,8 +9,9 @@ from functools import reduce
 from CML_tool.ML_Utils import compute_1dkde_curve
 from CML_tool.Utils import round_up_sig_figs, split_at_mid_space
 
-def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map, title, xmax, bandwidth, signs=None, npoints=None,
-                         top:int=10, min_shap:float=1e-5, overlap: float=0.5, figsize:tuple=(4,2), fontsize:float=12, return_all=False, color_kde='C0', color_rugs='C1'):
+def plot_shap_ridgelines(shaps, data_rep=None, all_features_names=None, features_name_map=None, title=None, xmax=None, bandwidth=1e-3, signs=None, npoints=None,
+                         top:int=10, min_shap:float=1e-5, overlap: float=0.5, figsize:tuple=(4,2), fontsize:float=12, return_all=False, color_kde='C0', color_rugs='C1',
+                         show=False):
     
     # check if passed shaps are absolute
     if  all(all(val >= 0 for val in row) for row in shaps):
@@ -22,6 +23,12 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
     assert isinstance(shaps, np.ndarray), "shapley values array must be a NumPy array."    
     assert shaps.ndim == 2, "Shapley values array must be a 2D array."
     assert isinstance(all_features_names, np.ndarray), "`all_features_names` must be a NumPy array or list of strings."
+    
+    if xmax is None:
+        xmax = round_up_sig_figs(
+            number=np.nanmax(shaps)*1.05,
+            sig_figs=2
+        )
     
     if npoints is None:
         npoints=int(xmax/bandwidth)
@@ -36,10 +43,15 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
     
     X_top = shaps[:,top_idx].T # Shap values for the top features
 
-    if data_rep.lower() == 'signatures':
+    if data_rep is None:
+        if all_features_names is None:
+            labels = [f'Feature {i+1}' for i in range(len(top_idx))]
+        else:
+            labels = [f for f in all_features_names[top_idx]]
+    elif data_rep.lower() == 'signatures':
         labels = [f'[{x}]:'+features_name_map.get(x, 'Unknown') for x in all_features_names[top_idx]]
     elif data_rep.lower() == 'channels':
-        # Returns strings with replacements according to the mapping otherwise retunrs original (map input string)
+        # Returns strings with replacements according to the mapping otherwise returns original (map input string)
         labels = [reduce(lambda x, kv: x.replace(*kv), features_name_map.items(), label) for label in all_features_names[top_idx]]
     else:
         raise ValueError(f'Data representation `{data_rep}` is not supported.')
@@ -112,7 +124,12 @@ def plot_shap_ridgelines(shaps, data_rep, all_features_names, features_name_map,
 
     gs.update(hspace=-overlap)
     gs.update(top=1)
-    fig.suptitle(title)
+    fig.suptitle(title or '')
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
     
     if return_all:
         return fig, axes, curves
