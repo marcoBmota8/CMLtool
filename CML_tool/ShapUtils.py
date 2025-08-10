@@ -276,25 +276,20 @@ def calculate_shap_values(
                 return shap_interactions
         else:
             shap_values = np.array(explainer.shap_values(test_data))[1,...] # Return the shapley values for positive class in binary classification problems
-            if index is not None:
-                if feature_names is None:
-                    feature_names = [f'f_{i}' for i in np.arange(test_data.shape[1])]
-                shap_values=pd.DataFrame(
-                    columns=feature_names,
-                    index=index,
-                    data=shap_values
-                )
-            if retrieve_explainer:
-                return shap_values, explainer
-            else:
-                return shap_values
     else:
         raise ValueError(f'Explainer_type: {explainer_type} currently not supported.')
     
-    
+    if index is not None:
+        if feature_names is None:
+            feature_names = [f'f_{i}' for i in np.arange(test_data.shape[1])]
+        shap_values=pd.DataFrame(
+            columns=feature_names,
+            index=index,
+            data=shap_values
+        )
     if retrieve_explainer:
         return shap_values, explainer
-    else:   
+    else:
         return shap_values
 
 def CI_shap(
