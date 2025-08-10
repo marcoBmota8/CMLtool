@@ -3,6 +3,7 @@ import warnings
 import logging
 
 import numpy as np
+import pandas as pd
 
 from sklearn.utils.validation import check_is_fitted
 from joblib import Parallel, delayed
@@ -20,6 +21,8 @@ def calculate_shap_values(
         training_data,
         training_outcome,
         test_data,
+        index = None,
+        feature_names = None,
         pretrained = False,
         explainer_type = None,
         link_function = None,
@@ -43,6 +46,9 @@ def calculate_shap_values(
         -training_data: Data used to train the model. This is only used if pretrained=False. -> numpy.array
         -training_outcome: labels or target values for the training instances. -> numpy.array
         -test_data: Data for which predictions shapley values are calculated. -> numpy.array
+        -index: Index to asign to the Shapley values arrays. If None is passed, then the plaina array is returned. (Default:None)
+        -feature_names: Only used when index is not None. List or array of strings with the features names to be used in the columns of the returned dataframe.
+            If it is None and index is not, features are assigned a sequential name as `f_i` where i is the order of each feature. (Default:None)
         -pretrained: Boolean indicating whether the passed model object is already trained on the
             background data or not. If False, model is fitted to the background data passed (Default: False) -> bool
         -explainer_type: 'linear', 'exact', 'tree', 'treeGPU'. Linear SHAP (linear models) and TreeExplainer (Lundberg et al. 2020) (tree-based models) 
@@ -86,7 +92,7 @@ def calculate_shap_values(
             (Default: False) -> bool
         
     Returns:
-        -Shapley values as a numpy array of the same shape as test_data.
+        -Shapley values as a numpy array of the same shape as test_data, or pandas DataFrame if `index` is not None.
 
     '''
 
@@ -255,13 +261,29 @@ def calculate_shap_values(
                           TreeExplainer Shapley interaction values can only be computed using the observational feature perturbation (conditional expectations).
                           Hence, in general, the sum across features wont add up to the shapley values computed using the interventional feature perturbation (marginal expectactions),
                           but they will if computed using the same feature perturbation (expectation)
-                """, UserWarning)   
+                """, UserWarning)
+            if index is not None:
+                if feature_names is None:
+                    feature_names = [f'f_{i}' for i in np.arange(test_data.shape[1])]
+                shap_interactions=pd.DataFrame(
+                    columns=feature_names,
+                    index=index,
+                    data=shap_interactions
+                )
             if retrieve_explainer:
                 return shap_interactions, explainer
             else:
                 return shap_interactions
         else:
             shap_values = np.array(explainer.shap_values(test_data))[1,...] # Return the shapley values for positive class in binary classification problems
+            if index is not None:
+                if feature_names is None:
+                    feature_names = [f'f_{i}' for i in np.arange(test_data.shape[1])]
+                shap_values=pd.DataFrame(
+                    columns=feature_names,
+                    index=index,
+                    data=shap_values
+                )
             if retrieve_explainer:
                 return shap_values, explainer
             else:
@@ -315,7 +337,7 @@ def CI_shap(
         - randomness_distortion: Whether to compute CIs based on boostrapped samples of the training data ("bootstrapping_train_data"),
             different randon seeds of the model during training on the full datatset ("seeds"),
             or bootstrapped reapeats of the test set ("bootstrapping_test_set")-> str (Default:"bootstrapping_test_set")
-        -n_jobs: number of threads to use durign parallel computation of the MonteCarlo samples. (Default: 1) -> int
+        -n_jobs: number of threads to use during parallel computation of the MonteCarlo samples. (Default: 1) -> int
         -MC_repeats: MonteCarlo simulations to estimate the Shapley values distribution.
             (Default:1000) -> int
         -alpha: confidence level. (Default: 0.05) -> float
@@ -391,6 +413,7 @@ def CI_shap(
         shap_values_samples = np.stack(shap_values_samples, axis=-1)
         
     elif randomness_distortion == 'seeds':
+        
         shap_values_samples = Parallel(n_jobs=n_jobs)(delayed(calculate_shap_values)(
             model = model.set_params(**{'random_state':seed}),
             background_data = background_data,
@@ -404,7 +427,7 @@ def CI_shap(
             max_samples=max_samples,
             retrieve_explainer=False,
             retrieve_interactions=retrieve_interactions
-            ) for seed in tqdm(np.random.choice(range(MC_repeats), size=MC_repeats, replace=False))
+            ) for seed in tqdm(np.random.choice(range(10*MC_repeats), size=MC_repeats, replace=False))
             )
         # Transform samples into an array
         shap_values_samples = np.stack(shap_values_samples, axis=-1)
