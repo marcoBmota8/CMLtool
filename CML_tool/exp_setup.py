@@ -1,7 +1,6 @@
-# %%
 import os
 import logging
-
+import sys
 import json
 import itertools
 import matplotlib.pyplot as plt
@@ -11,7 +10,6 @@ from pathlib import Path
 from CML_tool.Utils import flatten_list
 from CML_tool.decorators import file_based_cacheing, file_based_figure_saving
 
-# %%
 def find_root(path, folder_name):
     """
     Given a file or directory path, return the Path up to and including
@@ -24,15 +22,19 @@ def find_root(path, folder_name):
             return parent
     raise ValueError(f"Folder {folder_name!r} not found in path {p}")
 
-def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_name=None):
+def results_folder_tree(root_dir, metadata, results_name=None):
     '''
     Create the folder tree to store results for a given experiment root directory and metadata.
-    First, this function attempts to create a '.../Results' (or '.../Results/result_name' if any string is passed under 'result_name')
+    This function was designed to fit a specific model tuning pipeline script. 
+    
+    First, this function attempts to create a '.../Results' (or '.../Results/result_name' if any string is passed under 'results_name')
     folder in the main path of the script where it is ran if such directory does not already exist.
-    Second, if indicated through 'create_model_subfolder' it attempts to create a subfolder under Results for the model architecture 
-    employed if this subfolder does not exits.
-    Third, it takes the path to the input data and uses the dataset_name in the metadata to create a subsubfolder /Results/model_name/dataset_name 
+    
+    Second and if needed/asked for, it creates a subfolder under '.../Results' for the model architecture employed if this subfolder does not exits.
+    
+    Third, it takes the path to the input data and uses the dataset_name in the metadata to create a subsubfolder '.../Results/model_name/dataset_name'
     to store the results.
+    
     Args:
         -root_dir: Experiment root directory
         -metadata: Experiment metadata dictionary
@@ -41,47 +43,26 @@ def results_folder_tree(root_dir, metadata,create_model_subfolder=True, results_
     Out:
         -experiment directory
     '''
-
-    dataset_name = metadata["dataset_name"]
-
-    if isinstance(dataset_name, list) and len(dataset_name)==1:
-        dataset_name = dataset_name[0]
-    elif isinstance(dataset_name, str):
-        pass
-    elif dataset_name==None:
-        pass
-    else:
-        raise ValueError("The format of the dataset_name metadata is WRONG. It is neither a list if one element neither a single string.")
     
-    # Generate directory for results 
-    if results_name !=None:
+    # Generate directory for results (e.g. different cohorts)
+    if results_name is not None:
         results_dir = os.path.join(root_dir, 'Results', results_name)
     else:
         results_dir = os.path.join(root_dir, 'Results')
 
-    if not os.path.exists(results_dir):
-        os.makedirs(results_dir, exist_ok=False)
+    # Generate directory for model architecture (e.g. Random Forest)
+    if metadata['model_name'] is not None:
+        results_dir = os.path.join(results_dir, metadata['model_name'])
 
-    if create_model_subfolder:
-        # Generate directory for model architecture
-        model_dir = os.path.join(results_dir, metadata['model_name'])
-
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir, exist_ok=False)
-    else:
-        model_dir = results_dir
-
-    #Generate directory the experiment
-    if dataset_name !=None:
-        exp_dir = os.path.join(model_dir, dataset_name)
-    else:
-        exp_dir = model_dir
-
-
-    if not os.path.exists(exp_dir):
-        os.makedirs(exp_dir, exist_ok=False)
+    #Generate directory the experiment (e.g. the data representation used: ICA Sources, Raw/Channels, etc)
+    if metadata['dataset_name'] is not None:
+        results_dir = os.path.join(results_dir, metadata["dataset_name"])
     
-    return exp_dir
+    # Make the directory
+    os.makedirs(results_dir, exist_ok=True)
+    
+    return results_dir
+
 
 
 def save_metadata(metadata:dict=None, path:str=None, filename:str=None):
@@ -186,5 +167,20 @@ def save_figure_wrapper(fig:plt.figure, **kwargs):
         fig (plt.figure): The saved figure.
     '''
     return fig
+
+    
+def record_logs(path:Path, filename:str='output.log'):
+    
+    filename, ext = os.path.splitext(filename)
+    
+    if ext.lower() != '.log':
+        filename = filename + '.log'
+    
+    # Open the log file 
+    log_file = open(path/filename, 'w')
+    # Redirect stdout and stderr to the file
+    sys.stdout = log_file
+    sys.stderr = log_file
+
         
 
