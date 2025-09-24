@@ -263,13 +263,7 @@ def calculate_shap_values(
                           but they will if computed using the same feature perturbation (expectation)
                 """, UserWarning)
             if index is not None:
-                if feature_names is None:
-                    feature_names = [f'f_{i}' for i in np.arange(test_data.shape[1])]
-                shap_interactions=pd.DataFrame(
-                    columns=feature_names,
-                    index=index,
-                    data=shap_interactions
-                )
+                logging.info('shap_interactions are 3D arrays which CANNOT be transformed into a pandas dataframe.... \nRetrieving the interactions 3D array...')
             if retrieve_explainer:
                 return shap_interactions, explainer
             else:
