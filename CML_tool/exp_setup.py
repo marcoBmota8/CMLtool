@@ -63,8 +63,6 @@ def results_folder_tree(root_dir, metadata, results_name=None):
     
     return results_dir
 
-
-
 def save_metadata(metadata:dict=None, path:str=None, filename:str=None):
     
     if (path is not None) and (metadata is not None) and (filename is not None):
@@ -169,7 +167,7 @@ def save_figure_wrapper(fig:plt.figure, **kwargs):
     return fig
 
     
-def record_logs(path:Path, filename:str='output.log'):
+def record_logs(path:Path or str, filename:str='output.log'):
     
     filename, ext = os.path.splitext(filename)
     
@@ -178,6 +176,7 @@ def record_logs(path:Path, filename:str='output.log'):
     
     # Open the log file 
     log_file = open(path/filename, 'w')
+    
     # Redirect stdout and stderr to the file
     sys.stdout = log_file
     sys.stderr = log_file
