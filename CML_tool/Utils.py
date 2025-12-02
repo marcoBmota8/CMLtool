@@ -213,7 +213,7 @@ def round_to_resolution(x, resolution, direction):
     else:
         raise ValueError('Rounding direction is misspecified. Choose among "ceil", "absolute-ceil", "floor", "absolute-floor" and "round".')
 
-def round_up_sig_figs(number, sig_figs):
+def round_up_sig_figs(number, sig_figs, as_str=False):
     if number == 0:
         return 0
     
@@ -234,7 +234,13 @@ def round_up_sig_figs(number, sig_figs):
     result = rounded_scaled * (10 ** (magnitude - sig_figs + 1))
     
     # Reapply the original sign
-    return sign * result
+    result = sign * result
+    
+    # Convert to string if appropriate
+    if as_str:
+        return str(result)
+    else:
+        return result
     
 def look_up_description(df,description):
     '''
@@ -257,3 +263,4 @@ def split_at_mid_space(s):
     # Find closest space to midpoint
     closest = min(space_indices, key=lambda x: abs(x - mid))
     return s[:closest] + '\n' + s[closest+1:]
+
