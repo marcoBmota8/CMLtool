@@ -250,10 +250,9 @@ def auc_ci(ground_truth,predictions,alpha=0.05, ci_type='wald'):
         -alpha: Delong test significance level (Default=0.05)
     
     Returns (in order):
-        -Mean value of the DeLong estimation of the area under the receiving operating characteristic curve (AUROC)
-        -Variance
-        -Wald confidence interval 
-        -Logistic confidence interval 
+        -Mean value of the DeLong estimation of the area under the receiving operating characteristic curve (AUROC): float
+        -Variance: float
+        -Confidence interval: tuple
 
     """
     auc, variance = delong_roc_variance(ground_truth,predictions)
