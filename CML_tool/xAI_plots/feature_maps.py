@@ -3,7 +3,7 @@ from matplotlib.pyplot import cm, get_cmap
 SLE_2021 = {
     'SIGNATURES_MAP' : {
         "S-650": "SLE w/ organ/system involvement",
-        "S-1289": "High intensity SLE code",
+        "S-1289": "SLE general presentation",
         "S-1497": "Lupus nephritis", 
         "S-1588": "SLE w/ high DNA double strand Ab",
         "S-1683": "Toxic maculopathy coded in autoimmune patients",
